@@ -47,7 +47,6 @@
        01 BASE-AMOUNT       PIC 9(5)V99.
        01 FINAL-AMOUNT      PIC 9(5)V99.
        01 WS-LINE           PIC X(80).
-       01 INPUT-ROOM-TYPE      PIC X(10).
        01 WS-EOF            PIC X VALUE 'N'.
       *-----------------------
        PROCEDURE DIVISION.
@@ -78,13 +77,13 @@
 
            BOOK-ROOM.
            DISPLAY "Enter room type (SINGLE/DOUBLE/DELUXE): ".
-           ACCEPT INPUT-ROOM-TYPE.
+           ACCEPT ROOM-TYPE.
            OPEN INPUT ROOM-FILE.
            PERFORM UNTIL WS-EOF = 'Y'
                READ ROOM-FILE
                    AT END MOVE 'Y' TO WS-EOF
                    NOT AT END
-                       IF ROOM-TYPE = INPUT-ROOM-TYPE AND
+                       IF ROOM-TYPE = ROOM-TYPE AND
                            ROOM-STATUS = "AVAILABLE"
                            MOVE "BOOKED" TO ROOM-STATUS
                            REWRITE ROOM-RECORD
