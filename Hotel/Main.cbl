@@ -28,7 +28,7 @@
 
            EVALUATE MENU-CHOICE
                WHEN 1 PERFORM BOOK-ROOM
-               WHEN 2 PERFORM CANCEL-ROOM
+               WHEN 2 PERFORM CANCEL-BOOKING
                WHEN 3 PERFORM CHECK-IN
                WHEN 4 PERFORM CHECK-OUT
                WHEN 5 PERFORM VIEW-ROOMS
@@ -39,9 +39,10 @@
            STOP RUN.
 
        BOOK-ROOM.
-       CANCEL-ROOM.
+       CANCEL-BOOKING.
        CHECK-IN.
        CHECK-OUT.
        VIEW-ROOMS.
+           CALL 'viewRooms'.
        GENERATE-REPORT.
        END PROGRAM Main.
