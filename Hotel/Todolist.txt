@@ -6,3 +6,5 @@ A fucntion to view Bookings data.
 Check IN.
 
 Check Out.
+
+Generate report.
