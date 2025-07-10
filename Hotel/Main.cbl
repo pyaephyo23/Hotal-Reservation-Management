@@ -12,19 +12,20 @@
        01 MENU-CHOICE PIC 9.
        PROCEDURE DIVISION.
        MAIN-PROCEDURE.
+           PERFORM UNTIL MENU-CHOICE = 9
            DISPLAY
            "***********************************************************"
-           DISPLAY "Hotel Reservation Management System".
-           DISPLAY "1. Book a Room".
-           DISPLAY "2. Cancel Booking".
-           DISPLAY "3. Check-In".
-           DISPLAY "4. Check-Out".
-           DISPLAY "5. View Available Rooms".
-           DISPLAY "6. Generate Revenue Report".
-           DISPLAY "9. Exit".
+           DISPLAY "Hotel Reservation Management System"
+           DISPLAY "1. Book a Room"
+           DISPLAY "2. Cancel Booking"
+           DISPLAY "3. Check-In"
+           DISPLAY "4. Check-Out"
+           DISPLAY "5. View Available Rooms"
+           DISPLAY "6. Generate Revenue Report"
+           DISPLAY "9. Exit"
            DISPLAY
            "***********************************************************"
-           ACCEPT MENU-CHOICE.
+           ACCEPT MENU-CHOICE
 
            EVALUATE MENU-CHOICE
                WHEN 1 PERFORM BOOK-ROOM
@@ -35,7 +36,8 @@
                WHEN 6 PERFORM GENERATE-REPORT
                WHEN 9 STOP RUN
                WHEN OTHER DISPLAY "Invalid choice"
-           END-EVALUATE.
+           END-EVALUATE
+           END-PERFORM.
            STOP RUN.
 
        BOOK-ROOM.

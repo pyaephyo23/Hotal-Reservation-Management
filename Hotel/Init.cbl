@@ -31,17 +31,10 @@
            *> Add 20 Single rooms (R001-R020)
            PERFORM VARYING WS-INDEX FROM 1 BY 1 UNTIL WS-INDEX > 20
                MOVE SPACES TO ROOM-ID
-               IF WS-INDEX < 10
-                   STRING 'R00'
-                         WS-INDEX
-                         DELIMITED BY SIZE
-                         INTO ROOM-ID
-               ELSE
-                   STRING 'R0'
-                         WS-INDEX
-                         DELIMITED BY SIZE
-                         INTO ROOM-ID
-               END-IF
+               STRING 'R00'
+                     WS-INDEX
+                     DELIMITED BY SIZE
+                     INTO ROOM-ID
                MOVE 'Single' TO ROOM-TYPE
                MOVE 50000 TO PRICE-PER-NIGHT
                MOVE 'Available' TO R-STATUS
@@ -51,7 +44,7 @@
            *> Add 10 Double rooms (R021-R030)
            PERFORM VARYING WS-INDEX FROM 21 BY 1 UNTIL WS-INDEX > 30
                MOVE SPACES TO ROOM-ID
-               STRING 'R0'
+               STRING 'R00'
                      WS-INDEX
                      DELIMITED BY SIZE
                      INTO ROOM-ID
@@ -64,7 +57,7 @@
            *> Add 5 Deluxe rooms (R031-R035)
            PERFORM VARYING WS-INDEX FROM 31 BY 1 UNTIL WS-INDEX > 35
                MOVE SPACES TO ROOM-ID
-               STRING 'R0'
+               STRING 'R00'
                      WS-INDEX
                      DELIMITED BY SIZE
                      INTO ROOM-ID

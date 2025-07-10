@@ -72,6 +72,7 @@
            END-EVALUATE
            END-PERFORM.
            GOBACK.
+
        All-ROOMS-DSP.
            MOVE 0 TO WS-ROOM-COUNTER
            MOVE 'N' TO WS-EOF
