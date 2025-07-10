@@ -1,0 +1,8 @@
+bookRoom.cbl
+Check Customer Name for existing customer before adding to Booking.
+
+A fucntion to view Bookings data.
+
+Check IN.
+
+Check Out.
