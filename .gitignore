@@ -1,0 +1,30 @@
+
+# COBOL Source Files - usually you'd keep these
+!*.cbl
+!*.cob
+!*.cpy
+
+# Compiled or intermediate files
+*.lst
+*.idb
+*.o
+*.obj
+*.exe
+*.out
+*.int
+*.gnt
+*.mod
+*.sym
+*.err
+
+# Editor and OS junk
+*.log
+*.bak
+*~
+.DS_Store
+Thumbs.db
+
+# GnuCOBOL specific build folders (if used)
+bin/
+build/
+output/
