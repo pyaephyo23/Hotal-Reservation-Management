@@ -7,42 +7,38 @@
            SELECT ROOMS-FILE ASSIGN TO '../DATA/ROOMS.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
-               RECORD KEY IS ROOM-ID
-               FILE STATUS IS WS-FILE-STATUS.
+               RECORD KEY IS ROOM-ID.
            SELECT CUSTOMER-FILE ASSIGN TO '../DATA/CUSTOMER.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
-               RECORD KEY IS CUSTOMER-ID
-               ALTERNATE RECORD KEY IS CUSTOMER-NAME WITH DUPLICATES
-               FILE STATUS IS WS-FILE-STATUS.
+               RECORD KEY IS CUSTOMER-ID.
            SELECT BOOKING-FILE ASSIGN TO '../DATA/BOOKING.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
-               RECORD KEY IS BOOKING-ID
-               FILE STATUS IS WS-FILE-STATUS.
+               RECORD KEY IS BOOKING-ID.
 
        DATA DIVISION.
        FILE SECTION.
-       FD  ROOMS-FILE.
-       01  ROOMS-RECORD.
-           05  ROOM-ID             PIC X(5).
-           05  ROOM-TYPE           PIC X(10).
-           05  PRICE-PER-NIGHT     PIC 9(9).
-           05  R-STATUS            PIC X(10).
+       FD ROOMS-FILE.
+       01 ROOMS-RECORD.
+           05 ROOM-ID             PIC X(5).
+           05 ROOM-TYPE           PIC X(10).
+           05 PRICE-PER-NIGHT     PIC 9(9).
+           05 R-STATUS            PIC X(10).
 
-       FD  CUSTOMER-FILE.
-       01  CUSTOMER-RECORD.
+       FD CUSTOMER-FILE.
+       01 CUSTOMER-RECORD.
            05 CUSTOMER-ID     PIC 9(5).
            05 CUSTOMER-NAME   PIC X(30).
            05 CUSTOMER-PHONE  PIC X(15).
            05 CUSTOMER-EMAIL  PIC X(30).
            05 CUSTOMER-ADDR   PIC X(50).
 
-       FD  BOOKING-FILE.
-       01  BOOKING-RECORD.
+       FD BOOKING-FILE.
+       01 BOOKING-RECORD.
            05 BOOKING-ID      PIC 9(5).
            05 ROOM-ID-BK      PIC X(5).
-           05 CUSTOMER-ID-BK  PIC 9(5).
+           05 CUSTOMER-ID-BK  PIC 9(6).
            05 CHECKIN-DATE    PIC X(8).
            05 CHECKOUT-DATE   PIC X(8).
            05 BOOKING-STATUS  PIC X(10).
@@ -50,51 +46,37 @@
        WORKING-STORAGE SECTION.
        01 WS-ROOM-ID         PIC X(5).
        01 WS-FOUND           PIC X VALUE 'N'.
-       01 WS-CUSTOMER-ID     PIC 9(5).
+       01 WS-CUSTOMER-ID     PIC 9(5) VALUE ZEROS.
        01 WS-CUSTOMER-NAME   PIC X(30).
        01 WS-CUSTOMER-PHONE  PIC X(15).
        01 WS-CUSTOMER-EMAIL  PIC X(30).
        01 WS-CUSTOMER-ADDR   PIC X(50).
-       01 WS-BOOKING-ID      PIC 9(5).
+       01 WS-BOOKING-ID      PIC 9(5) VALUE ZEROS.
+       01 WS-CHECKIN-DATE    PIC X(8) VALUE "00000000".
+       01 WS-CHECKOUT-DATE   PIC X(8) VALUE "00000000".
        01 WS-CHOICE          PIC 9.
        01 WS-VALID-FLAG      PIC X VALUE 'Y'.
        01 WS-TEMP-CHAR       PIC X.
        01 WS-TEMP-INDEX      PIC 9(4).
-
-       *> File status
-       01 WS-FILE-STATUS     PIC 99.
-
-       *> Auto-increment counters
-       01 WS-NEXT-CUSTOMER-ID PIC 9(5).
-       01 WS-NEXT-BOOKING-ID  PIC 9(5).
-       01 WS-EOF-FLAG         PIC X VALUE 'N'.
-       01 WS-EXISTING-CUSTOMER-FLAG PIC X VALUE 'N'.
-
-       *> Simple date fields
-       01 WS-CHECKIN-DATE     PIC 9(8) VALUE ZEROS.
-       01 WS-CHECKOUT-DATE    PIC 9(8) VALUE ZEROS.
-
-       *> No current date needed
+       01 WS-ID-FOUND        PIC X VALUE 'N'.
+       01 WS-EXIST-CHOICE    PIC X.
 
        PROCEDURE DIVISION.
 
        MAIN-PAGE.
            DISPLAY "***************************************************"
-           DISPLAY "          HOTEL ROOM BOOKING SYSTEM"
-           DISPLAY "***************************************************"
            DISPLAY "1. Book Room"
            DISPLAY "9. Exit"
            DISPLAY "***************************************************"
-           DISPLAY "Enter your choice: " WITH NO ADVANCING
            ACCEPT WS-CHOICE
            EVALUATE WS-CHOICE
                WHEN 1
                    PERFORM BOOK-ROOM-PROCESS
                    GO TO MAIN-PAGE
                WHEN 9
-                   GOBACK
+                   STOP RUN
                WHEN OTHER
-                   DISPLAY "Invalid option. Please try again."
+                   DISPLAY "Invalid option. Try again."
                    GO TO MAIN-PAGE
            END-EVALUATE.
 
@@ -102,38 +84,35 @@
            MOVE 'N' TO WS-FOUND
            PERFORM VALIDATE-ROOM-ID
 
-           OPEN INPUT ROOMS-FILE
-           MOVE WS-ROOM-ID TO ROOM-ID
-           READ ROOMS-FILE KEY IS ROOM-ID
-               INVALID KEY
-                   DISPLAY "Room ID " WS-ROOM-ID " not found."
-                   CLOSE ROOMS-FILE
-                   MOVE 'N' TO WS-FOUND
-               NOT INVALID KEY
-                   IF R-STATUS = 'Available'
-                       DISPLAY
-                  "***************************************************"
-                       DISPLAY "ROOM DETAILS"
-                       DISPLAY
-                  "***************************************************"
-                       DISPLAY "Room ID: " ROOM-ID
-                       DISPLAY "Room Type: " ROOM-TYPE
-                       DISPLAY "Price per night: " PRICE-PER-NIGHT
-                       DISPLAY "Status: " R-STATUS
-                       DISPLAY
-                  "***************************************************"
-                       MOVE 'Y' TO WS-FOUND
-                       CLOSE ROOMS-FILE
-                       PERFORM BOOK-ROOM
-                   ELSE
-                       DISPLAY "Room " WS-ROOM-ID " is NOT AVAILABLE."
-                       DISPLAY "Current Status: " R-STATUS
-                       CLOSE ROOMS-FILE
-                       MOVE 'N' TO WS-FOUND
-                   END-IF
-           END-READ
+           OPEN I-O ROOMS-FILE
+           PERFORM UNTIL WS-FOUND = 'Y'
+               READ ROOMS-FILE NEXT
+                   AT END
+                       EXIT PERFORM
+                   NOT AT END
+                       IF ROOM-ID = WS-ROOM-ID
+                           IF R-STATUS = 'Available'
+                               DISPLAY "Room Details:"
+                               DISPLAY "ID:       " ROOM-ID
+                               DISPLAY "Type:     " ROOM-TYPE
+                               DISPLAY "Price:    " PRICE-PER-NIGHT
+                               DISPLAY "Status:   " R-STATUS
+                               DISPLAY "Room is AVAILABLE."
+                               MOVE 'Y' TO WS-FOUND
+                               PERFORM BOOK-ROOM
+                               CLOSE ROOMS-FILE
+                           ELSE
+                         DISPLAY "Room " WS-ROOM-ID " is NOT AVAILABLE."
+                               CLOSE ROOMS-FILE
+                               PERFORM BOOK-ROOM-RETRY
+                           END-IF
+                       END-IF
+               END-READ
+           END-PERFORM
 
-           IF WS-FOUND = 'N'
+           IF WS-FOUND NOT = 'Y'
+               CLOSE ROOMS-FILE
+               DISPLAY "Room ID " WS-ROOM-ID " not found."
                PERFORM BOOK-ROOM-RETRY
            END-IF.
 
@@ -145,266 +124,167 @@
            ACCEPT WS-CHOICE
            EVALUATE WS-CHOICE
                WHEN 1
-                   CONTINUE
+                   PERFORM BOOK-ROOM-PROCESS
                WHEN 9
-                   GOBACK
+                   STOP RUN
                WHEN OTHER
                    DISPLAY "Invalid option. Try again."
-                   GO TO BOOK-ROOM-RETRY
+                   PERFORM BOOK-ROOM-RETRY
            END-EVALUATE.
 
        BOOK-ROOM.
-           *> Check if customer exists by name first
-           PERFORM CHECK-EXISTING-CUSTOMER
+           PERFORM VALIDATE-CUSTOMER-NAME
 
-           *> If we found an existing customer, use that customer's info
-           IF WS-EXISTING-CUSTOMER-FLAG = 'Y'
-               DISPLAY "Using existing customer record"
-           ELSE
-               *> Get additional customer info to create new record
-               PERFORM VALIDATE-CUSTOMER-NAME
+           *> Check if customer exists by name
+           OPEN INPUT CUSTOMER-FILE
+           MOVE 'N' TO WS-ID-FOUND
+           PERFORM UNTIL WS-ID-FOUND = 'Y'
+               READ CUSTOMER-FILE NEXT
+                   AT END
+                       EXIT PERFORM
+                   NOT AT END
+                       IF CUSTOMER-NAME = WS-CUSTOMER-NAME
+                       DISPLAY "Customer exists with following details:"
+                           DISPLAY "ID: " CUSTOMER-ID
+                           DISPLAY "Phone: " CUSTOMER-PHONE
+                           DISPLAY "Email: " CUSTOMER-EMAIL
+                           DISPLAY "Address: " CUSTOMER-ADDR
+                           DISPLAY "Use this customer? (Y/N): "
+                           ACCEPT WS-EXIST-CHOICE
+                       IF WS-EXIST-CHOICE = 'Y' OR WS-EXIST-CHOICE = 'y'
+                              MOVE CUSTOMER-ID TO WS-CUSTOMER-ID
+                               MOVE 'Y' TO WS-ID-FOUND
+                           ELSE
+             DISPLAY "Do you want to enter a different name? (Y/N): "
+                             ACCEPT WS-EXIST-CHOICE
+                    IF WS-EXIST-CHOICE = 'Y' OR WS-EXIST-CHOICE = 'y'
+                        CLOSE CUSTOMER-FILE
+                                 GO TO BOOK-ROOM
+                             ELSE
+                                 DISPLAY "Booking cancelled."
+                                 CLOSE CUSTOMER-FILE
+                                 CLOSE ROOMS-FILE
+                                 PERFORM BOOK-ROOM-RETRY
+                             END-IF
+                       END-IF
+               END-READ
+           END-PERFORM
+           CLOSE CUSTOMER-FILE
+
+           IF WS-ID-FOUND NOT = 'Y'
+               *> Create new customer
                PERFORM VALIDATE-CUSTOMER-PHONE
                PERFORM VALIDATE-CUSTOMER-EMAIL
                PERFORM VALIDATE-CUSTOMER-ADDR
 
-               *> Create new customer file if it doesn't exist
-               IF WS-FILE-STATUS = 35
-                   OPEN OUTPUT CUSTOMER-FILE
-                   CLOSE CUSTOMER-FILE
-                   OPEN I-O CUSTOMER-FILE
-               ELSE
-                   OPEN I-O CUSTOMER-FILE
-               END-IF
-
-               *> Create new customer record
+               OPEN INPUT CUSTOMER-FILE
+               MOVE 0 TO WS-CUSTOMER-ID
+               PERFORM UNTIL WS-ID-FOUND = 'Y'
+                   READ CUSTOMER-FILE NEXT
+                       AT END
+                           MOVE 'Y' TO WS-ID-FOUND
+                       NOT AT END
+                           IF CUSTOMER-ID > WS-CUSTOMER-ID
+                               MOVE CUSTOMER-ID TO WS-CUSTOMER-ID
+                           END-IF
+                   END-READ
+               END-PERFORM
+               CLOSE CUSTOMER-FILE
+               ADD 1 TO WS-CUSTOMER-ID
                MOVE WS-CUSTOMER-ID TO CUSTOMER-ID
                MOVE WS-CUSTOMER-NAME TO CUSTOMER-NAME
                MOVE WS-CUSTOMER-PHONE TO CUSTOMER-PHONE
                MOVE WS-CUSTOMER-EMAIL TO CUSTOMER-EMAIL
                MOVE WS-CUSTOMER-ADDR TO CUSTOMER-ADDR
 
+               OPEN I-O CUSTOMER-FILE
                WRITE CUSTOMER-RECORD
-               END-WRITE
                CLOSE CUSTOMER-FILE
-               DISPLAY
-               "New customer record created with ID: " WS-CUSTOMER-ID
            END-IF
 
-           PERFORM VALIDATE-BOOKING-ID
-
-           *> Check if file exists, if not create it
-           IF WS-FILE-STATUS = '35'
-               OPEN OUTPUT BOOKING-FILE
-           ELSE
-               OPEN I-O BOOKING-FILE
-           END-IF
-
-           *> Create the booking record
+           *> Generate booking ID
+           OPEN I-O BOOKING-FILE
+           MOVE 0 TO WS-BOOKING-ID
+           MOVE 'Y' TO WS-ID-FOUND
+           PERFORM UNTIL WS-ID-FOUND = 'N'
+               READ BOOKING-FILE NEXT
+                   AT END
+                       MOVE 'N' TO WS-ID-FOUND
+                   NOT AT END
+                       IF BOOKING-ID > WS-BOOKING-ID
+                           MOVE BOOKING-ID TO WS-BOOKING-ID
+                       END-IF
+               END-READ
+           END-PERFORM
+           ADD 1 TO WS-BOOKING-ID
            MOVE WS-BOOKING-ID TO BOOKING-ID
            MOVE WS-ROOM-ID TO ROOM-ID-BK
            MOVE WS-CUSTOMER-ID TO CUSTOMER-ID-BK
-           MOVE ZEROS TO CHECKIN-DATE
-           MOVE ZEROS TO CHECKOUT-DATE
+           MOVE WS-CHECKIN-DATE TO CHECKIN-DATE
+           MOVE WS-CHECKOUT-DATE TO CHECKOUT-DATE
            MOVE 'Active' TO BOOKING-STATUS
-
            WRITE BOOKING-RECORD
-           END-WRITE
            CLOSE BOOKING-FILE
 
-           *> Update room status to 'Booked'
-           OPEN I-O ROOMS-FILE
+           *> Update room status
            MOVE WS-ROOM-ID TO ROOM-ID
            READ ROOMS-FILE KEY IS ROOM-ID
                INVALID KEY
-                   DISPLAY "Error: Unable to update room status."
+                   DISPLAY "Error updating room status."
                NOT INVALID KEY
                    MOVE 'Booked' TO R-STATUS
                    REWRITE ROOMS-RECORD
-                       INVALID KEY
-                          DISPLAY "Error: Could not update room status."
-               END-REWRITE
            END-READ
            CLOSE ROOMS-FILE
 
-           DISPLAY
-           "***************************************************"
-           DISPLAY "BOOKING CONFIRMATION"
-           DISPLAY
-           "***************************************************"
+           DISPLAY "========== Booking Completed =========="
            DISPLAY "Booking ID: " WS-BOOKING-ID
-           DISPLAY "Room ID: " WS-ROOM-ID
-           DISPLAY "Customer ID: " WS-CUSTOMER-ID
+           DISPLAY "Room ID:    " WS-ROOM-ID
+           DISPLAY "Customer ID:" WS-CUSTOMER-ID
            DISPLAY "Customer Name: " WS-CUSTOMER-NAME
-           DISPLAY "Status: Active"
-           DISPLAY
-           "***************************************************".
+           DISPLAY "========================================"
 
-      *-------------------------
-      * VALIDATION ROUTINES
-      *-------------------------
+           PERFORM BOOK-ROOM-RETRY
+           STOP RUN.
 
        VALIDATE-ROOM-ID.
-           DISPLAY "Enter Room ID to check availability: "
+           DISPLAY "Enter Room ID: "
            ACCEPT WS-ROOM-ID
-           IF FUNCTION TRIM(WS-ROOM-ID) = SPACE
+           IF WS-ROOM-ID = SPACES
                DISPLAY "Room ID cannot be empty."
                GO TO VALIDATE-ROOM-ID
            END-IF.
 
-
-       VALIDATE-CUSTOMER-ID.
-           *> Generate auto-increment customer ID
-           MOVE 'N' TO WS-EOF-FLAG
-           MOVE 0 TO WS-NEXT-CUSTOMER-ID
-
-           *> Find highest existing customer ID
-           OPEN INPUT CUSTOMER-FILE
-
-           *> Check if file opened successfully (35 = file not found)
-           IF WS-FILE-STATUS = 35
-               *> File doesn't exist - use default starting ID
-               MOVE 10001 TO WS-CUSTOMER-ID
-               MOVE 'Y' TO WS-EOF-FLAG
-           ELSE
-               PERFORM UNTIL WS-EOF-FLAG = 'Y'
-                  READ CUSTOMER-FILE NEXT RECORD
-                      AT END
-                         MOVE 'Y' TO WS-EOF-FLAG
-                      NOT AT END
-                         IF CUSTOMER-ID >= WS-NEXT-CUSTOMER-ID
-                            MOVE CUSTOMER-ID TO WS-NEXT-CUSTOMER-ID
-                         END-IF
-                   END-READ
-               END-PERFORM
-               CLOSE CUSTOMER-FILE
-
-               *> Set next ID (highest + 1)
-               IF WS-NEXT-CUSTOMER-ID = 0
-                   MOVE 10001 TO WS-CUSTOMER-ID
-               ELSE
-                   ADD 1 TO WS-NEXT-CUSTOMER-ID
-                   MOVE WS-NEXT-CUSTOMER-ID TO WS-CUSTOMER-ID
-               END-IF
-           END-IF
-
-           DISPLAY "Auto-generated Customer ID: " WS-CUSTOMER-ID.
-
-       CHECK-EXISTING-CUSTOMER.
+       VALIDATE-CUSTOMER-NAME.
            DISPLAY "Enter Customer Name: "
            ACCEPT WS-CUSTOMER-NAME
-
-           *> Check if name is empty
-           IF FUNCTION TRIM(WS-CUSTOMER-NAME) = SPACE
-               DISPLAY "Name cannot be empty."
-               GO TO CHECK-EXISTING-CUSTOMER
-           END-IF
-
-           *> First check if customer file exists or has any records
-           MOVE 'N' TO WS-EXISTING-CUSTOMER-FLAG
-           MOVE 'N' TO WS-EOF-FLAG
-
-           *> Try to open the file
-           OPEN INPUT CUSTOMER-FILE
-
-           *> Check if file opened successfully (35 = file not found)
-           IF WS-FILE-STATUS = 35
-               *> File doesn't exist - create a new customer record
-               MOVE 'Y' TO WS-EOF-FLAG
-               DISPLAY
-               "Customer file doesn't exist. Creating new customer."
-               PERFORM VALIDATE-CUSTOMER-ID
-           ELSE
-               *> File exists, search for customer by name
-               PERFORM UNTIL WS-EOF-FLAG = 'Y'
-                   READ CUSTOMER-FILE NEXT RECORD
-                       AT END
-                           MOVE 'Y' TO WS-EOF-FLAG
-                       NOT AT END
-                           IF CUSTOMER-NAME = WS-CUSTOMER-NAME
-                               MOVE 'Y' TO WS-EXISTING-CUSTOMER-FLAG
-                               MOVE CUSTOMER-ID TO WS-CUSTOMER-ID
-                               MOVE CUSTOMER-PHONE TO WS-CUSTOMER-PHONE
-                               MOVE CUSTOMER-EMAIL TO WS-CUSTOMER-EMAIL
-                               MOVE CUSTOMER-ADDR TO WS-CUSTOMER-ADDR
-                               DISPLAY "Found existing customer ID: "
-                                   WS-CUSTOMER-ID
-                               MOVE 'Y' TO WS-EOF-FLAG
-                           END-IF
-                   END-READ
-               END-PERFORM
-               CLOSE CUSTOMER-FILE
-           END-IF.
-
-       VALIDATE-CUSTOMER-NAME.
-           *> We already have the customer name from CHECK-EXISTING-CUSTOMER
-           IF FUNCTION TRIM(WS-CUSTOMER-NAME) = SPACE
-               DISPLAY "Name cannot be empty."
-               DISPLAY "Enter Customer Name again: "
-               ACCEPT WS-CUSTOMER-NAME
+           IF WS-CUSTOMER-NAME = SPACES
+               DISPLAY "Customer Name cannot be empty."
                GO TO VALIDATE-CUSTOMER-NAME
            END-IF.
 
        VALIDATE-CUSTOMER-PHONE.
            DISPLAY "Enter Customer Phone: "
            ACCEPT WS-CUSTOMER-PHONE
-           IF FUNCTION TRIM(WS-CUSTOMER-PHONE) = SPACE
-               DISPLAY "Phone number cannot be empty."
+           IF WS-CUSTOMER-PHONE = SPACES
+               DISPLAY "Customer Phone cannot be empty."
                GO TO VALIDATE-CUSTOMER-PHONE
            END-IF.
-
 
        VALIDATE-CUSTOMER-EMAIL.
            DISPLAY "Enter Customer Email: "
            ACCEPT WS-CUSTOMER-EMAIL
-           IF FUNCTION TRIM(WS-CUSTOMER-EMAIL) = SPACE
-               DISPLAY "Email cannot be empty."
+           IF WS-CUSTOMER-EMAIL = SPACES
+               DISPLAY "Customer Email cannot be empty."
                GO TO VALIDATE-CUSTOMER-EMAIL
            END-IF.
 
        VALIDATE-CUSTOMER-ADDR.
            DISPLAY "Enter Customer Address: "
            ACCEPT WS-CUSTOMER-ADDR
-           IF FUNCTION TRIM(WS-CUSTOMER-ADDR) = SPACE
-               DISPLAY "Address cannot be empty."
+           IF WS-CUSTOMER-ADDR = SPACES
+               DISPLAY "Customer Address cannot be empty."
                GO TO VALIDATE-CUSTOMER-ADDR
            END-IF.
-
-       VALIDATE-BOOKING-ID.
-           *> Generate auto-increment booking ID
-           MOVE 'N' TO WS-EOF-FLAG
-           MOVE 0 TO WS-NEXT-BOOKING-ID
-
-           *> Find highest existing booking ID
-           OPEN INPUT BOOKING-FILE
-
-           *> Check if file opened successfully (35 = file not found)
-           IF WS-FILE-STATUS = '35'
-               *> File doesn't exist - use default starting ID
-               DISPLAY "Booking file doesn't exist. Using default ID."
-               MOVE 10001 TO WS-BOOKING-ID
-               MOVE 'Y' TO WS-EOF-FLAG
-           ELSE
-               PERFORM UNTIL WS-EOF-FLAG = 'Y'
-                   READ BOOKING-FILE NEXT RECORD
-                       AT END
-                           MOVE 'Y' TO WS-EOF-FLAG
-                       NOT AT END
-                           IF BOOKING-ID >= WS-NEXT-BOOKING-ID
-                               MOVE BOOKING-ID TO WS-NEXT-BOOKING-ID
-                           END-IF
-                   END-READ
-               END-PERFORM
-               CLOSE BOOKING-FILE
-
-               *> Set next ID (highest + 1)
-               IF WS-NEXT-BOOKING-ID = 0
-                   MOVE 10001 TO WS-BOOKING-ID
-               ELSE
-                   ADD 1 TO WS-NEXT-BOOKING-ID
-                   MOVE WS-NEXT-BOOKING-ID TO WS-BOOKING-ID
-               END-IF
-           END-IF
-
-           DISPLAY "Auto-generated Booking ID: " WS-BOOKING-ID.
 
        END PROGRAM bookRoom.
