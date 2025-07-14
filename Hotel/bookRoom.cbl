@@ -76,6 +76,7 @@
        01 WS-EXIST-CHOICE    PIC X.
        LINKAGE SECTION.
        01 LINK PIC 9.
+       01 WS-DATE-TO-CHECK PIC 9(8).
 
        PROCEDURE DIVISION USING LINK.
 
@@ -150,6 +151,8 @@
 
        BOOK-ROOM.
            PERFORM VALIDATE-CUSTOMER-NAME
+           PERFORM VALIDATE-CHECKIN-DATE
+           PERFORM VALIDATE-CHECKOUT-DATE
 
            *> Check if customer exists by name
            OPEN INPUT CUSTOMER-FILE
@@ -301,6 +304,66 @@
            IF WS-CUSTOMER-ADDR = SPACES
                DISPLAY "Customer Address cannot be empty."
                GO TO VALIDATE-CUSTOMER-ADDR
+           END-IF.
+
+       VALIDATE-CHECKIN-DATE.
+           DISPLAY "Enter Check-in Date (YYYYMMDD): "
+           ACCEPT WS-CHECKIN-DATE
+           IF WS-CHECKIN-DATE = ZEROS OR WS-CHECKIN-DATE = SPACES
+               DISPLAY "Check-in date cannot be empty."
+               GO TO VALIDATE-CHECKIN-DATE
+           END-IF
+           PERFORM VALIDATE-DATE-FORMAT USING WS-CHECKIN-DATE
+           IF WS-VALID-FLAG = 'N'
+               DISPLAY "Invalid date format. Please use YYYYMMDD."
+               GO TO VALIDATE-CHECKIN-DATE
+           END-IF.
+
+       VALIDATE-CHECKOUT-DATE.
+           DISPLAY "Enter Check-out Date (YYYYMMDD): "
+           ACCEPT WS-CHECKOUT-DATE
+           IF WS-CHECKOUT-DATE = ZEROS OR WS-CHECKOUT-DATE = SPACES
+               DISPLAY "Check-out date cannot be empty."
+               GO TO VALIDATE-CHECKOUT-DATE
+           END-IF
+           PERFORM VALIDATE-DATE-FORMAT USING WS-CHECKOUT-DATE
+           IF WS-VALID-FLAG = 'N'
+               DISPLAY "Invalid date format. Please use YYYYMMDD."
+               GO TO VALIDATE-CHECKOUT-DATE
+           END-IF
+           IF WS-CHECKOUT-DATE <= WS-CHECKIN-DATE
+               DISPLAY "Check-out date must be after check-in date."
+               GO TO VALIDATE-CHECKOUT-DATE
+           END-IF.
+
+       VALIDATE-DATE-FORMAT USING WS-DATE-TO-CHECK.
+           MOVE 'Y' TO WS-VALID-FLAG
+           
+           *> Check if all characters are numeric
+           PERFORM VARYING WS-TEMP-INDEX FROM 1 BY 1 UNTIL WS-TEMP-INDEX > 8
+               MOVE WS-DATE-TO-CHECK(WS-TEMP-INDEX:1) TO WS-TEMP-CHAR
+               IF WS-TEMP-CHAR NOT NUMERIC
+                   MOVE 'N' TO WS-VALID-FLAG
+                   EXIT PERFORM
+               END-IF
+           END-PERFORM
+           
+           *> Basic range validation (not comprehensive)
+           IF WS-VALID-FLAG = 'Y'
+               EVALUATE WS-DATE-TO-CHECK(5:2)
+                   WHEN '01' WHEN '02' WHEN '03' WHEN '04' WHEN '05' WHEN '06'
+                   WHEN '07' WHEN '08' WHEN '09' WHEN '10' WHEN '11' WHEN '12'
+                       CONTINUE
+                   WHEN OTHER
+                       MOVE 'N' TO WS-VALID-FLAG
+               END-EVALUATE
+               
+               EVALUATE WS-DATE-TO-CHECK(7:2)
+                   WHEN '01' THRU '31'
+                       CONTINUE
+                   WHEN OTHER
+                       MOVE 'N' TO WS-VALID-FLAG
+               END-EVALUATE
            END-IF.
 
        END PROGRAM bookRoom.
