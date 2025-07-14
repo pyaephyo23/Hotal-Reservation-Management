@@ -59,8 +59,6 @@
        01 WS-VALID-FLAG      PIC X VALUE 'Y'.
        01 WS-TEMP-CHAR       PIC X.
        01 WS-TEMP-INDEX      PIC 9(4).
-<<<<<<< HEAD
-
        *> File status
        01 WS-FILE-STATUS     PIC 99.
 
@@ -74,7 +72,6 @@
        01 WS-CHECKOUT-DATE    PIC 9(8) VALUE ZEROS.
 
        *> No current date needed
-=======
        01 WS-ID-FOUND        PIC X VALUE 'N'.
        01 WS-EXIST-CHOICE    PIC X.
        LINKAGE SECTION.
