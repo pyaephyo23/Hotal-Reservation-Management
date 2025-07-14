@@ -69,7 +69,6 @@
        01 WS-NEXT-BOOKING-ID  PIC 9(5).
        01 WS-EOF-FLAG         PIC X VALUE 'N'.
        01 WS-EXISTING-CUSTOMER-FLAG PIC X VALUE 'N'.
-
        *> Simple date fields
        01 WS-CHECKIN-DATE     PIC 9(8) VALUE ZEROS.
        01 WS-CHECKOUT-DATE    PIC 9(8) VALUE ZEROS.
