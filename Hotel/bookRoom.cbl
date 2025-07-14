@@ -11,7 +11,8 @@
            SELECT CUSTOMER-FILE ASSIGN TO '../DATA/CUSTOMER.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
-               RECORD KEY IS CUSTOMER-ID.
+               RECORD KEY IS CUSTOMER-ID
+               ALTERNATE RECORD KEY IS CUSTOMER-NAME WITH DUPLICATES.
            SELECT BOOKING-FILE ASSIGN TO '../DATA/BOOKING.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
@@ -76,14 +77,15 @@
 =======
        01 WS-ID-FOUND        PIC X VALUE 'N'.
        01 WS-EXIST-CHOICE    PIC X.
->>>>>>> main
+       LINKAGE SECTION.
+       01 LINK PIC 9.
 
-       PROCEDURE DIVISION.
+       PROCEDURE DIVISION USING LINK.
 
        MAIN-PAGE.
            DISPLAY "***************************************************"
            DISPLAY "1. Book Room"
-           DISPLAY "9. Exit"
+           DISPLAY "9. Go back to Main Menu"
            DISPLAY "***************************************************"
            ACCEPT WS-CHOICE
            EVALUATE WS-CHOICE
@@ -91,7 +93,7 @@
                    PERFORM BOOK-ROOM-PROCESS
                    GO TO MAIN-PAGE
                WHEN 9
-                   STOP RUN
+                   GOBACK
                WHEN OTHER
                    DISPLAY "Invalid option. Try again."
                    GO TO MAIN-PAGE

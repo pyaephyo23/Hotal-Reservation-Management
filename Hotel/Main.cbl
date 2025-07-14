@@ -41,8 +41,10 @@
            STOP RUN.
 
        BOOK-ROOM.
+           CALL 'bookRoom'.
        CANCEL-BOOKING.
        CHECK-IN.
+           CALL 'checkIn'.
        CHECK-OUT.
        VIEW-ROOMS.
            CALL 'viewRooms'.
