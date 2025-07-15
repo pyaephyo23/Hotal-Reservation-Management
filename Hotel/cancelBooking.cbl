@@ -13,26 +13,20 @@
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS ROOM-ID.
-           SELECT BOOKING-FILE ASSIGN TO '../DATA/BOOKING.DAT'
+           SELECT BOOKING-FILE ASSIGN TO '../DATA/BOOKINGS.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
-               RECORD KEY IS BOOKING-ID.
+               RECORD KEY IS BOOKING-ID
+               ALTERNATE RECORD KEY IS CHECKIN-DATE WITH DUPLICATES
+               ALTERNATE RECORD KEY IS CHECKOUT-DATE WITH DUPLICATES.
        DATA DIVISION.
        FILE SECTION.
        FD  ROOMS-FILE.
-       01  ROOMS-RECORD.
-           05  ROOM-ID             PIC X(5).
-           05  ROOM-TYPE           PIC X(10).
-           05  PRICE-PER-NIGHT     PIC 9(9).
-           05  R-STATUS            PIC X(10).
+       COPY "./CopyBooks/ROOMS.cpy".
+
        FD  BOOKING-FILE.
-       01  BOOKING-RECORD.
-           05 BOOKING-ID      PIC 9(5).
-           05 ROOM-ID-BK      PIC X(5).
-           05 CUSTOMER-ID-BK  PIC 9(6).
-           05 CHECKIN-DATE    PIC X(8).
-           05 CHECKOUT-DATE   PIC X(8).
-           05 BOOKING-STATUS  PIC X(10).
+       COPY "./CopyBooks/BOOKINGS.cpy".
+
        WORKING-STORAGE SECTION.
        01 WS-CHOICE          PIC 9.
        01 WS-ROOM-ID         PIC X(5).
