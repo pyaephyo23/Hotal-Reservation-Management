@@ -36,14 +36,17 @@
            05 CUSTOMER-EMAIL  PIC X(30).
            05 CUSTOMER-ADDR   PIC X(50).
 
-       FD BOOKING-FILE.
-       01 BOOKING-RECORD.
+       FD  BOOKING-FILE.
+       01  BOOKING-RECORD.
            05 BOOKING-ID      PIC 9(5).
            05 ROOM-ID-BK      PIC X(5).
            05 CUSTOMER-ID-BK  PIC 9(6).
            05 CHECKIN-DATE    PIC X(8).
            05 CHECKOUT-DATE   PIC X(8).
            05 BOOKING-STATUS  PIC X(10).
+           05 CHEKIN-FLAG     PIC X VALUE 'N'.
+           05 CHECKOUT-FLAG   PIC X VALUE 'N'.
+           05 CREATED-AT      PIC X(14).
 
        WORKING-STORAGE SECTION.
        01 WS-ROOM-ID         PIC X(5).
@@ -69,6 +72,19 @@
        *> Simple date fields
        01 WS-CHECKIN-DATE     PIC 9(8) VALUE ZEROS.
        01 WS-CHECKOUT-DATE    PIC 9(8) VALUE ZEROS.
+       
+       *> Current date for validation
+       01 WS-CURRENT-DATE-DATA.
+           05 WS-CURRENT-DATE.
+               10 WS-CURRENT-YEAR     PIC 9(4).
+               10 WS-CURRENT-MONTH    PIC 9(2).
+               10 WS-CURRENT-DAY      PIC 9(2).
+           05 WS-CURRENT-TIME.
+               10 WS-CURRENT-HOURS    PIC 9(2).
+               10 WS-CURRENT-MINUTES  PIC 9(2).
+               10 WS-CURRENT-SECONDS  PIC 9(2).
+       01 WS-CURRENT-DATE-NUM     PIC 9(8).
+       01 WS-CREATED-AT-TIMESTAMP PIC X(14).
 
        *> No current date needed
        01 WS-ID-FOUND        PIC X VALUE 'N'.
@@ -235,12 +251,28 @@
                END-READ
            END-PERFORM
            ADD 1 TO WS-BOOKING-ID
+           
+           *> Get current date and time for CREATED-AT
+           ACCEPT WS-CURRENT-DATE-DATA FROM DATE YYYYMMDD
+           STRING WS-CURRENT-YEAR
+                  WS-CURRENT-MONTH
+                  WS-CURRENT-DAY
+                  WS-CURRENT-HOURS
+                  WS-CURRENT-MINUTES
+                  WS-CURRENT-SECONDS
+                  DELIMITED BY SIZE
+                  INTO WS-CREATED-AT-TIMESTAMP
+           
+           *> Populate booking record
            MOVE WS-BOOKING-ID TO BOOKING-ID
            MOVE WS-ROOM-ID TO ROOM-ID-BK
            MOVE WS-CUSTOMER-ID TO CUSTOMER-ID-BK
            MOVE WS-CHECKIN-DATE TO CHECKIN-DATE
            MOVE WS-CHECKOUT-DATE TO CHECKOUT-DATE
            MOVE 'Active' TO BOOKING-STATUS
+           MOVE 'N' TO CHEKIN-FLAG
+           MOVE 'N' TO CHECKOUT-FLAG
+           MOVE WS-CREATED-AT-TIMESTAMP TO CREATED-AT
            WRITE BOOKING-RECORD
            CLOSE BOOKING-FILE
 
@@ -260,6 +292,9 @@
            DISPLAY "Room ID:    " WS-ROOM-ID
            DISPLAY "Customer ID:" WS-CUSTOMER-ID
            DISPLAY "Customer Name: " WS-CUSTOMER-NAME
+           DISPLAY "Check-in Date: " WS-CHECKIN-DATE
+           DISPLAY "Check-out Date: " WS-CHECKOUT-DATE
+           DISPLAY "Created At: " WS-CREATED-AT-TIMESTAMP
            DISPLAY "========================================"
 
            PERFORM BOOK-ROOM-RETRY
@@ -306,6 +341,10 @@
            END-IF.
 
        VALIDATE-CHECKIN-DATE.
+           *> Get current date first
+           ACCEPT WS-CURRENT-DATE-DATA FROM DATE YYYYMMDD
+           MOVE WS-CURRENT-DATE TO WS-CURRENT-DATE-NUM
+           
            DISPLAY "Enter Check-in Date (YYYYMMDD): "
            ACCEPT WS-CHECKIN-DATE
            IF WS-CHECKIN-DATE = ZEROS OR WS-CHECKIN-DATE = SPACES
@@ -316,6 +355,13 @@
            PERFORM VALIDATE-DATE-FORMAT
            IF WS-VALID-FLAG = 'N'
                DISPLAY "Invalid date format. Please use YYYYMMDD."
+               GO TO VALIDATE-CHECKIN-DATE
+           END-IF
+           
+           *> Check if check-in date is not earlier than current date
+           IF WS-CHECKIN-DATE < WS-CURRENT-DATE-NUM
+               DISPLAY "Check-in date cannot be earlier than today ("
+                       WS-CURRENT-DATE-NUM ")."
                GO TO VALIDATE-CHECKIN-DATE
            END-IF.
 
