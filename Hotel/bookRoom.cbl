@@ -8,12 +8,12 @@
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS ROOM-ID.
-           SELECT CUSTOMER-FILE ASSIGN TO '../DATA/CUSTOMER.DAT'
+           SELECT CUSTOMER-FILE ASSIGN TO '../DATA/CUSTOMERS.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS CUSTOMER-ID
                ALTERNATE RECORD KEY IS CUSTOMER-NAME WITH DUPLICATES.
-           SELECT BOOKING-FILE ASSIGN TO '../DATA/BOOKING.DAT'
+           SELECT BOOKING-FILE ASSIGN TO '../DATA/BOOKINGS.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS BOOKING-ID
@@ -64,7 +64,7 @@
        *> Simple date fields
        01 WS-CHECKIN-DATE     PIC 9(8) VALUE ZEROS.
        01 WS-CHECKOUT-DATE    PIC 9(8) VALUE ZEROS.
-       
+
        *> Current date for validation
        01 WS-CURRENT-DATE-DATA.
            05 WS-CURRENT-DATE.
@@ -108,21 +108,21 @@
            *> Step 1: Get booking dates
            PERFORM VALIDATE-CHECKIN-DATE
            PERFORM VALIDATE-CHECKOUT-DATE
-           
+
            *> Step 2: Get room type preference
            PERFORM VALIDATE-ROOM-TYPE
-           
+
            *> Step 3: Check for available rooms of that type
            PERFORM CHECK-ROOM-AVAILABILITY
-           
+
            IF WS-FOUND = 'Y'
                *> Step 4: Get customer information
                PERFORM VALIDATE-CUSTOMER-NAME
                PERFORM HANDLE-CUSTOMER-RECORD
-               
+
                *> Step 5: Create booking
                PERFORM CREATE-BOOKING
-               
+
                DISPLAY "========== Booking Completed =========="
                DISPLAY "Booking ID: " WS-BOOKING-ID
                DISPLAY "Room ID:    " WS-ROOM-ID
@@ -134,10 +134,10 @@
                DISPLAY "Created At: " WS-CREATED-AT-TIMESTAMP
                DISPLAY "========================================"
            ELSE
-               DISPLAY "No available rooms of type " WS-ROOM-TYPE 
+               DISPLAY "No available rooms of type " WS-ROOM-TYPE
                        " for the requested dates."
            END-IF
-           
+
            PERFORM BOOK-ROOM-RETRY.
 
        BOOK-ROOM-RETRY.
@@ -159,11 +159,11 @@
        VALIDATE-ROOM-TYPE.
            DISPLAY "Select Room Type:"
            DISPLAY "1. Single"
-           DISPLAY "2. Double" 
+           DISPLAY "2. Double"
            DISPLAY "3. Deluxe"
            DISPLAY "Enter choice (1-3): "
            ACCEPT WS-CHOICE
-           
+
            EVALUATE WS-CHOICE
                WHEN 1
                    MOVE 'Single' TO WS-ROOM-TYPE
@@ -175,21 +175,21 @@
                    DISPLAY "Invalid choice. Please try again."
                    GO TO VALIDATE-ROOM-TYPE
            END-EVALUATE
-           
+
            DISPLAY "Selected room type: " WS-ROOM-TYPE.
 
        CHECK-ROOM-AVAILABILITY.
            MOVE 'N' TO WS-FOUND
            MOVE ZEROS TO WS-AVAILABLE-COUNT
-           
-           DISPLAY "Checking availability for " WS-ROOM-TYPE 
-                   " rooms from " WS-CHECKIN-DATE 
+
+           DISPLAY "Checking availability for " WS-ROOM-TYPE
+                   " rooms from " WS-CHECKIN-DATE
                    " to " WS-CHECKOUT-DATE "..."
-           
+
            *> Open rooms file to get all rooms of the requested type
            OPEN INPUT ROOMS-FILE
            MOVE 'N' TO WS-EOF
-           
+
            PERFORM UNTIL WS-EOF = 'Y'
                READ ROOMS-FILE NEXT
                    AT END
@@ -197,20 +197,20 @@
                    NOT AT END
                        IF ROOM-TYPE = WS-ROOM-TYPE
                            *> Check if this room is available during the dates
-                           PERFORM CHECK-ROOM-CONFLICTS
-                           IF WS-CONFLICT-FOUND = 'N'
-                               ADD 1 TO WS-AVAILABLE-COUNT
-                               MOVE ROOM-ID TO 
-                                   WS-AVAILABLE-ROOM-ID(WS-AVAILABLE-COUNT)
-                               MOVE PRICE-PER-NIGHT TO 
-                                   WS-AVAILABLE-ROOM-PRICE(WS-AVAILABLE-COUNT)
+                         PERFORM CHECK-ROOM-CONFLICTS
+                         IF WS-CONFLICT-FOUND = 'N'
+                            ADD 1 TO WS-AVAILABLE-COUNT
+                            MOVE ROOM-ID TO
+                                WS-AVAILABLE-ROOM-ID(WS-AVAILABLE-COUNT)
+                            MOVE PRICE-PER-NIGHT TO
+                             WS-AVAILABLE-ROOM-PRICE(WS-AVAILABLE-COUNT)
                            END-IF
                        END-IF
                END-READ
            END-PERFORM
-           
+
            CLOSE ROOMS-FILE
-           
+
            *> Display available rooms and let user choose
            IF WS-AVAILABLE-COUNT > 0
                PERFORM DISPLAY-AVAILABLE-ROOMS
@@ -222,11 +222,11 @@
        DISPLAY-AVAILABLE-ROOMS.
            DISPLAY "Available " WS-ROOM-TYPE " rooms:"
            DISPLAY "============================================"
-           PERFORM VARYING WS-TEMP-INDEX FROM 1 BY 1 
+           PERFORM VARYING WS-TEMP-INDEX FROM 1 BY 1
                    UNTIL WS-TEMP-INDEX > WS-AVAILABLE-COUNT
-               DISPLAY WS-TEMP-INDEX ". Room " 
+               DISPLAY WS-TEMP-INDEX ". Room "
                        WS-AVAILABLE-ROOM-ID(WS-TEMP-INDEX)
-                       " - Price: " 
+                       " - Price: "
                        WS-AVAILABLE-ROOM-PRICE(WS-TEMP-INDEX)
            END-PERFORM
            DISPLAY "============================================".
@@ -234,8 +234,9 @@
        SELECT-ROOM-FROM-LIST.
            DISPLAY "Select a room (1-" WS-AVAILABLE-COUNT "): "
            ACCEPT WS-ROOM-CHOICE
-           
-           IF WS-ROOM-CHOICE >= 1 AND WS-ROOM-CHOICE <= WS-AVAILABLE-COUNT
+
+           IF WS-ROOM-CHOICE >= 1
+               AND WS-ROOM-CHOICE <= WS-AVAILABLE-COUNT
                MOVE WS-AVAILABLE-ROOM-ID(WS-ROOM-CHOICE) TO WS-ROOM-ID
                MOVE 'Y' TO WS-FOUND
                DISPLAY "Selected room: " WS-ROOM-ID
@@ -246,20 +247,20 @@
 
        CHECK-ROOM-CONFLICTS.
            MOVE 'N' TO WS-CONFLICT-FOUND
-           
+
            *> Open booking file to check for conflicts
            OPEN INPUT BOOKING-FILE
            MOVE 'N' TO WS-EOF
-           
+
            PERFORM UNTIL WS-EOF = 'Y'
                READ BOOKING-FILE NEXT
                    AT END
                        MOVE 'Y' TO WS-EOF
                    NOT AT END
                        *> Check if this booking conflicts with our dates
-                       IF ROOM-ID-BK = ROOM-ID AND BOOKING-STATUS = 'Active'
+                  IF ROOM-ID-BK = ROOM-ID AND BOOKING-STATUS = 'Active'
                            *> Check for date overlap
-                           IF (WS-CHECKIN-DATE <= CHECKOUT-DATE) AND 
+                           IF (WS-CHECKIN-DATE <= CHECKOUT-DATE) AND
                               (WS-CHECKOUT-DATE >= CHECKIN-DATE)
                                MOVE 'Y' TO WS-CONFLICT-FOUND
                                MOVE 'Y' TO WS-EOF  *> Exit early if conflict found
@@ -267,7 +268,7 @@
                        END-IF
                END-READ
            END-PERFORM
-           
+
            CLOSE BOOKING-FILE.
 
        HANDLE-CUSTOMER-RECORD.
@@ -275,21 +276,21 @@
            OPEN INPUT CUSTOMER-FILE
            MOVE 'N' TO WS-ID-FOUND
            MOVE 'N' TO WS-EOF
-           
+
            PERFORM UNTIL WS-EOF = 'Y'
                READ CUSTOMER-FILE NEXT
                    AT END
                        MOVE 'Y' TO WS-EOF
                    NOT AT END
-                       IF CUSTOMER-NAME = WS-CUSTOMER-NAME
-                           DISPLAY "Customer exists with following details:"
-                           DISPLAY "ID: " CUSTOMER-ID
-                           DISPLAY "Phone: " CUSTOMER-PHONE
-                           DISPLAY "Email: " CUSTOMER-EMAIL
-                           DISPLAY "Address: " CUSTOMER-ADDR
-                           DISPLAY "Use this customer? (Y/N): "
+                      IF CUSTOMER-NAME = WS-CUSTOMER-NAME
+                       DISPLAY "Customer exists with following details:"
+                       DISPLAY "ID: " CUSTOMER-ID
+                       DISPLAY "Phone: " CUSTOMER-PHONE
+                       DISPLAY "Email: " CUSTOMER-EMAIL
+                       DISPLAY "Address: " CUSTOMER-ADDR
+                       DISPLAY "Use this customer? (Y/N): "
                            ACCEPT WS-EXIST-CHOICE
-                           IF WS-EXIST-CHOICE = 'Y' OR WS-EXIST-CHOICE = 'y'
+                      IF WS-EXIST-CHOICE = 'Y' OR WS-EXIST-CHOICE = 'y'
                                MOVE CUSTOMER-ID TO WS-CUSTOMER-ID
                                MOVE 'Y' TO WS-ID-FOUND
                                MOVE 'Y' TO WS-EOF
@@ -314,7 +315,7 @@
            OPEN INPUT CUSTOMER-FILE
            MOVE 0 TO WS-CUSTOMER-ID
            MOVE 'N' TO WS-EOF
-           
+
            PERFORM UNTIL WS-EOF = 'Y'
                READ CUSTOMER-FILE NEXT
                    AT END
@@ -326,9 +327,9 @@
                END-READ
            END-PERFORM
            CLOSE CUSTOMER-FILE
-           
+
            ADD 1 TO WS-CUSTOMER-ID
-           
+
            *> Create customer record
            MOVE WS-CUSTOMER-ID TO CUSTOMER-ID
            MOVE WS-CUSTOMER-NAME TO CUSTOMER-NAME
@@ -339,7 +340,7 @@
            OPEN I-O CUSTOMER-FILE
            WRITE CUSTOMER-RECORD
            CLOSE CUSTOMER-FILE
-           
+
            DISPLAY "New customer created with ID: " WS-CUSTOMER-ID.
 
        CREATE-BOOKING.
@@ -347,7 +348,7 @@
            OPEN INPUT BOOKING-FILE
            MOVE 0 TO WS-BOOKING-ID
            MOVE 'N' TO WS-EOF
-           
+
            PERFORM UNTIL WS-EOF = 'Y'
                READ BOOKING-FILE NEXT
                    AT END
@@ -360,7 +361,7 @@
            END-PERFORM
            CLOSE BOOKING-FILE
            ADD 1 TO WS-BOOKING-ID
-           
+
            *> Get current date and time for CREATED-AT
            ACCEPT WS-CURRENT-DATE-DATA FROM DATE YYYYMMDD
            STRING WS-CURRENT-YEAR
@@ -371,7 +372,7 @@
                   WS-CURRENT-SECONDS
                   DELIMITED BY SIZE
                   INTO WS-CREATED-AT-TIMESTAMP
-           
+
            *> Create booking record
            OPEN I-O BOOKING-FILE
            MOVE WS-BOOKING-ID TO BOOKING-ID
@@ -434,7 +435,7 @@
            *> Get current date first
            ACCEPT WS-CURRENT-DATE-DATA FROM DATE YYYYMMDD
            MOVE WS-CURRENT-DATE TO WS-CURRENT-DATE-NUM
-           
+
            DISPLAY "Enter Check-in Date (YYYYMMDD): "
            ACCEPT WS-CHECKIN-DATE
            IF WS-CHECKIN-DATE = ZEROS OR WS-CHECKIN-DATE = SPACES
@@ -447,7 +448,7 @@
                DISPLAY "Invalid date format. Please use YYYYMMDD."
                GO TO VALIDATE-CHECKIN-DATE
            END-IF
-           
+
            *> Check if check-in date is not earlier than current date
            IF WS-CHECKIN-DATE < WS-CURRENT-DATE-NUM
                DISPLAY "Check-in date cannot be earlier than today ("
