@@ -31,6 +31,9 @@
            05 CHECKIN-DATE    PIC X(8).
            05 CHECKOUT-DATE   PIC X(8).
            05 BOOKING-STATUS  PIC X(10).
+           05 CHEKIN-FLAG     PIC X VALUE 'N'.
+           05 CHECKOUT-FLAG   PIC X VALUE 'N'.
+           05 CREATED-AT      PIC X(14).
        WORKING-STORAGE SECTION.
        01 WS-DUMMY-VALUE     PIC X VALUE ' '.
        01  WS-FILE-STATUS    PIC 99.
