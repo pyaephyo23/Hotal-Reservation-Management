@@ -31,7 +31,7 @@
        WORKING-STORAGE SECTION.
        01 WS-ROOM-ID         PIC X(5).
        01 WS-FOUND           PIC X VALUE 'N'.
-       01 WS-CUSTOMER-ID     PIC 9(5) VALUE ZEROS.
+       01 WS-CUSTOMER-ID     PIC 9(6) VALUE ZEROS.
        01 WS-CUSTOMER-NAME   PIC X(30).
        01 WS-CUSTOMER-PHONE  PIC X(15).
        01 WS-CUSTOMER-EMAIL  PIC X(30).
@@ -53,7 +53,7 @@
        01 WS-FILE-STATUS     PIC 99.
 
        *> Auto-increment counters
-       01 WS-NEXT-CUSTOMER-ID PIC 9(5).
+       01 WS-NEXT-CUSTOMER-ID PIC 9(6).
        01 WS-NEXT-BOOKING-ID  PIC 9(5).
        01 WS-EOF-FLAG         PIC X VALUE 'N'.
        01 WS-EXISTING-CUSTOMER-FLAG PIC X VALUE 'N'.
