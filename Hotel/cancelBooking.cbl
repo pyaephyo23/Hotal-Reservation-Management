@@ -29,6 +29,7 @@
 
        WORKING-STORAGE SECTION.
        01 WS-CHOICE          PIC 9.
+       01 WS-BOOKING-ID      PIC 9(5).
        01 WS-ROOM-ID         PIC X(5).
        01 WS-FOUND           PIC X VALUE 'N'.
        PROCEDURE DIVISION.
@@ -40,10 +41,9 @@
            ACCEPT WS-CHOICE
            EVALUATE WS-CHOICE
                WHEN 1
-                   DISPLAY "Enter Room ID to Cancel"
-                   ACCEPT WS-ROOM-ID
-                   PERFORM CANCEL-ROOM-PROCESS
-                   PERFORM CHANGE-BOOKING-STATUS
+                   DISPLAY "Enter Booking ID to Cancel"
+                   ACCEPT WS-BOOKING-ID
+                   PERFORM CANCEL-BOOKING-PROCESS
                    GO TO MAIN-PROCEDURE
                WHEN 9
                    STOP RUN
@@ -51,58 +51,55 @@
                    DISPLAY "Invalid option. Try again."
                    GO TO MAIN-PROCEDURE
            END-EVALUATE.
-           STOP RUN.
-           CANCEL-ROOM-PROCESS.
-           OPEN I-O ROOMS-FILE
-               MOVE 'N' TO WS-FOUND
-              PERFORM UNTIL WS-FOUND = 'Y'
-               READ ROOMS-FILE NEXT
-                   AT END
-                       EXIT PERFORM
-                   NOT AT END
-                       IF ROOM-ID = WS-ROOM-ID
-                           IF R-STATUS = 'Booked'
-                             MOVE "Available" TO R-STATUS
-                             REWRITE ROOMS-RECORD INVALID KEY
-                             DISPLAY "Error: Unable to rewrite record."
-                             END-REWRITE
-                             DISPLAY "Room ID " WS-ROOM-ID
-                             " is Cancelled"
-                             DISPLAY "Room ID " WS-ROOM-ID
-                             " is now "R-STATUS
-                             MOVE 'Y' TO WS-FOUND
-                           ELSE
-                            DISPLAY "Room " WS-ROOM-ID " is Not Booked"
-                            MOVE 'Y' TO WS-FOUND
-                           END-IF
-                       END-IF
-               END-READ
-           END-PERFORM.
-           CLOSE ROOMS-FILE.
-           IF WS-FOUND NOT = 'Y'
-               DISPLAY "Invalid Room ID"
+       CANCEL-BOOKING-PROCESS.
+           MOVE 'N' TO WS-FOUND
+           OPEN I-O BOOKING-FILE
+          MOVE WS-BOOKING-ID to NRC
+           READ BOOKING-FILE KEY IS BOOKING-ID
+               INVALID KEY
+                   DISPLAY "Invalid Booking ID."
+                   CLOSE BOOKING-FILE
+                   EXIT PARAGRAPH
+               NOT INVALID KEY
+                   IF BOOKING-STATUS = 'Active'
+                       MOVE "Cancelled" TO BOOKING-STATUS
+                       MOVE ROOM-ID-BK TO WS-ROOM-ID
+                       REWRITE BOOKING-RECORD
+                           INVALID KEY
+                     DISPLAY "Error: Unable to rewrite booking record."
+                           NOT INVALID KEY
+                    DISPLAY "Booking ID " WS-BOOKING-ID " is Cancelled."
+                       END-REWRITE
+                       MOVE 'Y' TO WS-FOUND
+                   ELSE
+                       DISPLAY "Booking is not Active."
+                       MOVE 'Y' TO WS-FOUND
+                   END-IF
+           END-READ
+           CLOSE BOOKING-FILE
+           IF WS-FOUND = 'Y'
+               PERFORM CANCEL-ROOM-PROCESS
            END-IF.
-           CHANGE-BOOKING-STATUS.
-               MOVE 'N' TO WS-FOUND
-               OPEN I-O BOOKING-FILE
-               PERFORM UNTIL WS-FOUND = 'Y'
-               READ BOOKING-FILE NEXT
-                   AT END
-                       EXIT PERFORM
-                   NOT AT END
-                       IF WS-ROOM-ID = ROOM-ID-BK
-                           IF BOOKING-STATUS = 'Active'
-                             MOVE "Cancelled" TO BOOKING-STATUS
-                             REWRITE BOOKING-RECORD
-                              INVALID KEY
-                              DISPLAY "Error: Unable to rewrite record."
-                             END-REWRITE
-                             DISPLAY "Booking ID "
-                             BOOKING-ID " is "BOOKING-STATUS
-                             MOVE 'Y' TO WS-FOUND
-                           END-IF
-                       END-IF
-               END-READ
-           END-PERFORM.
-           CLOSE BOOKING-FILE.
+
+       CANCEL-ROOM-PROCESS.
+           OPEN I-O ROOMS-FILE
+
+           MOVE WS-ROOM-ID to ROOM-ID
+           READ ROOMS-FILE KEY IS ROOM-ID
+               INVALID KEY
+                   DISPLAY "Associated Room not found."
+               NOT INVALID KEY
+                   IF R-STATUS = 'Booked'
+                       MOVE "Available" TO R-STATUS
+                       REWRITE ROOMS-RECORD
+                           INVALID KEY
+                         DISPLAY "Error: Unable to rewrite room record."
+                           NOT INVALID KEY
+                      DISPLAY "Room ID " WS-ROOM-ID " is now Available."
+                       END-REWRITE
+                   ELSE
+                  DISPLAY "Room " WS-ROOM-ID " is not currently Booked."
+                   END-IF
+           END-READ
+           CLOSE ROOMS-FILE.
        END PROGRAM cancelBooking.
