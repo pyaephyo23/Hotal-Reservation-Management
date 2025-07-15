@@ -8,19 +8,24 @@
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS ROOM-ID.
-
+           SELECT BOOKINGS-FILE ASSIGN TO '../DATA/BOOKINGS.DAT'
+               ORGANIZATION IS INDEXED
+               ACCESS MODE IS DYNAMIC
+               RECORD KEY IS BOOKING-ID
+               ALTERNATE RECORD KEY IS CHECKIN-DATE WITH DUPLICATES
+               ALTERNATE RECORD KEY IS CHECKOUT-DATE WITH DUPLICATES.
        DATA DIVISION.
        FILE SECTION.
        FD  ROOMS-FILE.
-       01  ROOM-RECORD.
-           05  ROOM-ID             PIC X(5).
-           05  ROOM-TYPE           PIC X(10).
-           05  PRICE-PER-NIGHT     PIC 9(9).
-           05  R-STATUS            PIC X(10).
+       COPY "./CopyBooks/ROOMS.cpy".
+       FD  BOOKINGS-FILE.
+       COPY "./CopyBooks/BOOKINGS.cpy".
 
        WORKING-STORAGE SECTION.
        01  WS-EOF                  PIC X VALUE 'N'.
+       01  WS-BOOKING-EOF          PIC X VALUE 'N'.
        01  WS-ROOM-COUNTER         PIC 999 VALUE 0.
+       01  WS-ACTIVE-BOOKINGS      PIC 999 VALUE 0.
        01  MENU-CHOICE             PIC 9.
        01  WS-HEADER-1.
            05 FILLER               PIC X(5) VALUE 'ROOM'.
@@ -30,6 +35,8 @@
            05 FILLER               PIC X(5) VALUE 'PRICE'.
            05 FILLER               PIC X(8) VALUE SPACES.
            05 FILLER               PIC X(6) VALUE 'STATUS'.
+           05 FILLER               PIC X(5) VALUE SPACES.
+           05 FILLER               PIC X(15) VALUE 'ACTIVE BOOKINGS'.
        01  WS-HEADER-2.
            05 FILLER               PIC X(5) VALUE '-----'.
            05 FILLER               PIC X(5) VALUE SPACES.
@@ -38,6 +45,8 @@
            05 FILLER               PIC X(10) VALUE '----------'.
            05 FILLER               PIC X(3) VALUE SPACES.
            05 FILLER               PIC X(10) VALUE '----------'.
+           05 FILLER               PIC X(5) VALUE SPACES.
+           05 FILLER               PIC X(15) VALUE '---------------'.
        01  WS-DETAIL-LINE.
            05 WS-DL-ROOM-ID        PIC X(5).
            05 FILLER               PIC X(5) VALUE SPACES.
@@ -46,6 +55,8 @@
            05 WS-DL-PRICE          PIC Z,ZZZ,ZZ9.
            05 FILLER               PIC X(3) VALUE SPACES.
            05 WS-DL-STATUS         PIC X(10).
+           05 FILLER               PIC X(5) VALUE SPACES.
+           05 WS-DL-ACTIVE-COUNT   PIC ZZ9.
        LINKAGE SECTION.
        01 LINK PIC 9.
        PROCEDURE DIVISION USING LINK.
@@ -55,18 +66,18 @@
            "***********************************************************"
            DISPLAY "View Hotel Rooms"
            DISPLAY "1. View All Rooms"
-           DISPLAY "2. View All Available Rooms"
-           DISPLAY "3. View All Booked Rooms"
-           DISPLAY "4. View All Occupied Rooms."
+           DISPLAY "2. View Single Rooms"
+           DISPLAY "3. View Double Rooms"
+           DISPLAY "4. View Delux Rooms"
            DISPLAY "9. Go Back."
            DISPLAY
            "***********************************************************"
            ACCEPT MENU-CHOICE
            EVALUATE MENU-CHOICE
                WHEN 1 PERFORM All-ROOMS-DSP
-               WHEN 2 PERFORM AVAILABLE-ROOMS-DSP
-               WHEN 3 PERFORM BOOKED-ROOMS-DSP
-               WHEN 4 PERFORM OCCUPIED-ROOMS-DSP
+               WHEN 2 PERFORM SINGLE-ROOMS-DSP
+               WHEN 3 PERFORM DOUBLE-ROOMS-DSP
+               WHEN 4 PERFORM DELUX-ROOMS-DSP
                WHEN 9 GOBACK
                WHEN OTHER DISPLAY "Invalid choice"
            END-EVALUATE
@@ -82,30 +93,30 @@
            PERFORM DISPLAY-SUMMARY
            CLOSE ROOMS-FILE.
 
-       AVAILABLE-ROOMS-DSP.
+       SINGLE-ROOMS-DSP.
            MOVE 0 TO WS-ROOM-COUNTER
            MOVE 'N' TO WS-EOF
            OPEN INPUT ROOMS-FILE
            PERFORM DISPLAY-HEADERS
-           PERFORM READ-AND-DISPLAY-AVAILABLE UNTIL WS-EOF = 'Y'
+           PERFORM READ-AND-DISPLAY-SINGLE UNTIL WS-EOF = 'Y'
            PERFORM DISPLAY-SUMMARY
            CLOSE ROOMS-FILE.
 
-       BOOKED-ROOMS-DSP.
+       DOUBLE-ROOMS-DSP.
            MOVE 0 TO WS-ROOM-COUNTER
            MOVE 'N' TO WS-EOF
            OPEN INPUT ROOMS-FILE
            PERFORM DISPLAY-HEADERS
-           PERFORM READ-AND-DISPLAY-BOOKED UNTIL WS-EOF = 'Y'
+           PERFORM READ-AND-DISPLAY-DOUBLE UNTIL WS-EOF = 'Y'
            PERFORM DISPLAY-SUMMARY
            CLOSE ROOMS-FILE.
 
-       OCCUPIED-ROOMS-DSP.
+       DELUX-ROOMS-DSP.
            MOVE 0 TO WS-ROOM-COUNTER
            MOVE 'N' TO WS-EOF
            OPEN INPUT ROOMS-FILE
            PERFORM DISPLAY-HEADERS
-           PERFORM READ-AND-DISPLAY-OCCUPIED UNTIL WS-EOF = 'Y'
+           PERFORM READ-AND-DISPLAY-DELUX UNTIL WS-EOF = 'Y'
            PERFORM DISPLAY-SUMMARY
            CLOSE ROOMS-FILE.
 
@@ -118,38 +129,42 @@
                AT END
                    MOVE 'Y' TO WS-EOF
                NOT AT END
+                   PERFORM COUNT-ACTIVE-BOOKINGS
                    PERFORM DISPLAY-ROOM-RECORD
                    ADD 1 TO WS-ROOM-COUNTER
            END-READ.
 
-       READ-AND-DISPLAY-AVAILABLE.
+       READ-AND-DISPLAY-SINGLE.
            READ ROOMS-FILE
                AT END
                    MOVE 'Y' TO WS-EOF
                NOT AT END
-                   IF R-STATUS = 'Available'
+                   IF ROOM-TYPE = 'Single'
+                       PERFORM COUNT-ACTIVE-BOOKINGS
                        PERFORM DISPLAY-ROOM-RECORD
                        ADD 1 TO WS-ROOM-COUNTER
                    END-IF
            END-READ.
 
-       READ-AND-DISPLAY-BOOKED.
+       READ-AND-DISPLAY-DOUBLE.
            READ ROOMS-FILE
                AT END
                    MOVE 'Y' TO WS-EOF
                NOT AT END
-                   IF R-STATUS = 'Booked'
+                   IF ROOM-TYPE = 'Double'
+                       PERFORM COUNT-ACTIVE-BOOKINGS
                        PERFORM DISPLAY-ROOM-RECORD
                        ADD 1 TO WS-ROOM-COUNTER
                    END-IF
            END-READ.
 
-       READ-AND-DISPLAY-OCCUPIED.
+       READ-AND-DISPLAY-DELUX.
            READ ROOMS-FILE
                AT END
                    MOVE 'Y' TO WS-EOF
                NOT AT END
-                   IF R-STATUS = 'Occupied'
+                   IF ROOM-TYPE = 'Delux'
+                       PERFORM COUNT-ACTIVE-BOOKINGS
                        PERFORM DISPLAY-ROOM-RECORD
                        ADD 1 TO WS-ROOM-COUNTER
                    END-IF
@@ -160,7 +175,27 @@
            MOVE ROOM-TYPE TO WS-DL-ROOM-TYPE
            MOVE PRICE-PER-NIGHT TO WS-DL-PRICE
            MOVE R-STATUS TO WS-DL-STATUS
+           MOVE WS-ACTIVE-BOOKINGS TO WS-DL-ACTIVE-COUNT
            DISPLAY WS-DETAIL-LINE.
+
+       COUNT-ACTIVE-BOOKINGS.
+           MOVE 0 TO WS-ACTIVE-BOOKINGS
+           MOVE 'N' TO WS-BOOKING-EOF
+           OPEN INPUT BOOKINGS-FILE
+           PERFORM COUNT-BOOKINGS-LOOP UNTIL WS-BOOKING-EOF = 'Y'
+           CLOSE BOOKINGS-FILE.
+
+       COUNT-BOOKINGS-LOOP.
+           READ BOOKINGS-FILE
+               AT END
+                   MOVE 'Y' TO WS-BOOKING-EOF
+               NOT AT END
+                   IF ROOM-ID-BK = ROOM-ID AND
+                      (BOOKING-STATUS = 'Active' OR
+                       BOOKING-STATUS = 'Confirmed')
+                       ADD 1 TO WS-ACTIVE-BOOKINGS
+                   END-IF
+           END-READ.
 
        DISPLAY-SUMMARY.
            DISPLAY SPACES
