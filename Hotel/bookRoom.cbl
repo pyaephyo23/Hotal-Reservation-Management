@@ -16,9 +16,7 @@
            SELECT BOOKING-FILE ASSIGN TO '../DATA/BOOKINGS.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
-               RECORD KEY IS BOOKING-ID
-               ALTERNATE RECORD KEY IS CHECKIN-DATE WITH DUPLICATES
-               ALTERNATE RECORD KEY IS CHECKOUT-DATE WITH DUPLICATES.
+               RECORD KEY IS BOOKING-ID.
        DATA DIVISION.
        FILE SECTION.
        FD ROOMS-FILE.
@@ -44,15 +42,13 @@
        01 WS-TEMP-CHAR       PIC X.
        01 WS-TEMP-INDEX      PIC 9(4).
        01 WS-ROOM-TYPE       PIC X(10).
-       01 WS-AVAILABLE-ROOMS PIC X(100).
        01 WS-CONFLICT-FOUND  PIC X VALUE 'N'.
        01 WS-EOF             PIC X VALUE 'N'.
        01 WS-AVAILABLE-COUNT PIC 9(2) VALUE ZEROS.
        01 WS-ROOM-CHOICE     PIC 9(2).
-       01 WS-AVAILABLE-ROOM-LIST.
-           05 WS-ROOM-ENTRY OCCURS 20 TIMES.
-               10 WS-AVAILABLE-ROOM-ID   PIC X(5).
-               10 WS-AVAILABLE-ROOM-PRICE PIC 9(9).
+       01 WS-ROOM-ENTRY OCCURS 20 TIMES.
+           05 WS-AVAILABLE-ROOM-ID   PIC X(5).
+           05 WS-AVAILABLE-ROOM-PRICE PIC 9(9).
        *> File status
        01 WS-FILE-STATUS     PIC 99.
 
@@ -182,7 +178,8 @@
            MOVE 'N' TO WS-FOUND
            MOVE ZEROS TO WS-AVAILABLE-COUNT
 
-           DISPLAY "Checking availability for " WS-ROOM-TYPE
+           DISPLAY "Checking availability for "
+                   FUNCTION TRIM(WS-ROOM-TYPE)
                    " rooms from " WS-CHECKIN-DATE
                    " to " WS-CHECKOUT-DATE "..."
 
@@ -196,19 +193,34 @@
                        MOVE 'Y' TO WS-EOF
                    NOT AT END
                        IF ROOM-TYPE = WS-ROOM-TYPE
-                           *> Check if this room is available during the dates
-                         PERFORM CHECK-ROOM-CONFLICTS
-                         IF WS-CONFLICT-FOUND = 'N'
-                            ADD 1 TO WS-AVAILABLE-COUNT
-                            MOVE ROOM-ID TO
+                           *> Initialize ACTIVE-BOOKING-COUNT if it contains non-numeric data
+                           IF ACTIVE-BOOKING-COUNT NOT NUMERIC
+                               MOVE ZERO TO ACTIVE-BOOKING-COUNT
+                           END-IF
+                           
+                           *> Only check conflicts if room has active bookings
+                           IF ACTIVE-BOOKING-COUNT = 0
+                               *> No active bookings, room is available
+                               ADD 1 TO WS-AVAILABLE-COUNT
+                               MOVE ROOM-ID TO
                                 WS-AVAILABLE-ROOM-ID(WS-AVAILABLE-COUNT)
-                            MOVE PRICE-PER-NIGHT TO
+                               MOVE PRICE-PER-NIGHT TO
                              WS-AVAILABLE-ROOM-PRICE(WS-AVAILABLE-COUNT)
+                           ELSE
+                               *> Check if this room is available during the dates
+                               PERFORM CHECK-ROOM-CONFLICTS
+                               IF WS-CONFLICT-FOUND = 'N'
+                                   ADD 1 TO WS-AVAILABLE-COUNT
+                                   MOVE ROOM-ID TO
+                                WS-AVAILABLE-ROOM-ID(WS-AVAILABLE-COUNT)
+                                   MOVE PRICE-PER-NIGHT TO
+                             WS-AVAILABLE-ROOM-PRICE(WS-AVAILABLE-COUNT)
+                               END-IF
                            END-IF
                        END-IF
                END-READ
            END-PERFORM
-
+           DISPLAY WS-AVAILABLE-COUNT
            CLOSE ROOMS-FILE
 
            *> Display available rooms and let user choose
@@ -263,7 +275,6 @@
                            IF (WS-CHECKIN-DATE <= CHECKOUT-DATE) AND
                               (WS-CHECKOUT-DATE >= CHECKIN-DATE)
                                MOVE 'Y' TO WS-CONFLICT-FOUND
-                               MOVE 'Y' TO WS-EOF  *> Exit early if conflict found
                            END-IF
                        END-IF
                END-READ
@@ -387,14 +398,19 @@
            WRITE BOOKING-RECORD
            CLOSE BOOKING-FILE
 
-           *> Update room status to Booked
+           *> Update room status to Booked and increment active booking count
            OPEN I-O ROOMS-FILE
            MOVE WS-ROOM-ID TO ROOM-ID
            READ ROOMS-FILE KEY IS ROOM-ID
                INVALID KEY
                    DISPLAY "Error updating room status."
                NOT INVALID KEY
+                   *> Initialize ACTIVE-BOOKING-COUNT if it contains non-numeric data
+                   IF ACTIVE-BOOKING-COUNT NOT NUMERIC
+                       MOVE ZERO TO ACTIVE-BOOKING-COUNT
+                   END-IF
                    MOVE 'Booked' TO R-STATUS
+                   ADD 1 TO ACTIVE-BOOKING-COUNT
                    REWRITE ROOMS-RECORD
            END-READ
            CLOSE ROOMS-FILE.

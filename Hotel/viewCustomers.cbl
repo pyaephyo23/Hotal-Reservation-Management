@@ -21,6 +21,9 @@
        01  WS-CUSTOMER-COUNTER     PIC 999 VALUE 0.
        01  MENU-CHOICE             PIC 9.
        01  WS-FILE-STATUS          PIC 99.
+       01  WS-SEARCH-NAME          PIC X(30).
+       01  WS-SEARCH-NAME-UPPER    PIC X(30).
+       01  WS-CUSTOMER-NAME-UPPER  PIC X(30).
 
        01  WS-HEADER-1.
            05 FILLER               PIC X(11) VALUE 'CUSTOMER ID'.
@@ -130,7 +133,12 @@
 
        SEARCH-BY-NAME.
            DISPLAY "Enter Customer Name to search: "
-           ACCEPT CUSTOMER-NAME
+           ACCEPT WS-SEARCH-NAME
+
+           *> Convert search name to uppercase for case-insensitive comparison
+           MOVE FUNCTION UPPER-CASE(WS-SEARCH-NAME)
+           TO WS-SEARCH-NAME-UPPER
+
            MOVE 'N' TO WS-EOF
            MOVE 0 TO WS-CUSTOMER-COUNTER
            OPEN INPUT CUSTOMER-FILE
@@ -143,22 +151,20 @@
                MOVE 'Y' TO WS-EOF
            ELSE
                PERFORM DISPLAY-HEADERS
-               START CUSTOMER-FILE KEY = CUSTOMER-NAME
-                   INVALID KEY
-                       DISPLAY
-                       "No customers found with name " CUSTOMER-NAME
-                       MOVE 'Y' TO WS-EOF
-               END-START
                PERFORM UNTIL WS-EOF = 'Y'
                    READ CUSTOMER-FILE NEXT RECORD
                        AT END
                            MOVE 'Y' TO WS-EOF
                        NOT AT END
-                           IF CUSTOMER-NAME(1:10) = CUSTOMER-NAME(1:10)
+                           *> Convert customer name to uppercase for comparison
+                           MOVE FUNCTION UPPER-CASE(CUSTOMER-NAME)
+                                TO WS-CUSTOMER-NAME-UPPER
+                          *> Check if search name is contained in customer name
+                           *> Use simple prefix matching for case-insensitive search
+                           IF WS-SEARCH-NAME-UPPER(1:10) =
+                              WS-CUSTOMER-NAME-UPPER(1:10)
                                PERFORM DISPLAY-CUSTOMER-RECORD
                                ADD 1 TO WS-CUSTOMER-COUNTER
-                           ELSE
-                               MOVE 'Y' TO WS-EOF
                            END-IF
                    END-READ
                END-PERFORM
