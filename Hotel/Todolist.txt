@@ -1,10 +1,17 @@
-bookRoom.cbl
-Check Customer Name for existing customer before adding to Booking.
-
-A fucntion to view Bookings data.
-
-Check IN.
+Module left to code -
 
 Check Out.
 
 Generate report.
+
+
+Error status.
+
+> cancelRoom.cbl
+Error Type: Logical Error
+Observed behaviour:
+Cancelling the booking where the customer is checked in.
+
+Propose solution:
+    Check whether the customer is already checked in before trying to cancel
+    booking status.

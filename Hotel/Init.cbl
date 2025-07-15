@@ -12,11 +12,7 @@
        DATA DIVISION.
        FILE SECTION.
        FD  ROOMS-FILE.
-       01  ROOM-RECORD.
-           05  ROOM-ID             PIC X(5).
-           05  ROOM-TYPE           PIC X(10).
-           05  PRICE-PER-NIGHT     PIC 9(9).
-           05  R-STATUS            PIC X(10).
+       COPY "./CopyBooks/ROOMS.cpy".
 
        WORKING-STORAGE SECTION.
        01  WS-EOF              PIC X VALUE 'N'.
@@ -38,7 +34,7 @@
                MOVE 'Single' TO ROOM-TYPE
                MOVE 50000 TO PRICE-PER-NIGHT
                MOVE 'Available' TO R-STATUS
-               WRITE ROOM-RECORD
+               WRITE ROOMS-RECORD
            END-PERFORM
 
            *> Add 10 Double rooms (R021-R030)
@@ -51,7 +47,7 @@
                MOVE 'Double' TO ROOM-TYPE
                MOVE 80000 TO PRICE-PER-NIGHT
                MOVE 'Available' TO R-STATUS
-               WRITE ROOM-RECORD
+               WRITE ROOMS-RECORD
            END-PERFORM
 
            *> Add 5 Deluxe rooms (R031-R035)
@@ -64,7 +60,7 @@
                MOVE 'Deluxe' TO ROOM-TYPE
                MOVE 120000 TO PRICE-PER-NIGHT
                MOVE 'Available' TO R-STATUS
-               WRITE ROOM-RECORD
+               WRITE ROOMS-RECORD
            END-PERFORM
 
            CLOSE ROOMS-FILE

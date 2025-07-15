@@ -4,7 +4,7 @@
        ENVIRONMENT DIVISION.
        INPUT-OUTPUT SECTION.
        FILE-CONTROL.
-           SELECT BOOKING-FILE ASSIGN TO '../DATA/BOOKING.DAT'
+           SELECT BOOKING-FILE ASSIGN TO '../DATA/BOOKINGS.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS BOOKING-ID
@@ -13,13 +13,7 @@
        DATA DIVISION.
        FILE SECTION.
        FD  BOOKING-FILE.
-       01  BOOKING-RECORD.
-           05 BOOKING-ID      PIC 9(5).
-           05 ROOM-ID-BK      PIC X(5).
-           05 CUSTOMER-ID-BK  PIC 9(5).
-           05 CHECKIN-DATE    PIC X(8).
-           05 CHECKOUT-DATE   PIC X(8).
-           05 BOOKING-STATUS  PIC X(10).
+       COPY "./CopyBooks/BOOKINGS.cpy".
 
        WORKING-STORAGE SECTION.
        01  WS-EOF                  PIC X VALUE 'N'.
