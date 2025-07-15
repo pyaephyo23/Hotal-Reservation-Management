@@ -5,7 +5,7 @@
       * Tectonics: cobc
       ******************************************************************
        IDENTIFICATION DIVISION.
-       PROGRAM-ID. CANCEL-ROOMS.
+       PROGRAM-ID. cancelBooking.
        ENVIRONMENT DIVISION.
        INPUT-OUTPUT SECTION.
        FILE-CONTROL.
@@ -111,4 +111,4 @@
                END-READ
            END-PERFORM.
            CLOSE BOOKING-FILE.
-       END PROGRAM CANCEL-ROOMS.
+       END PROGRAM cancelBooking.

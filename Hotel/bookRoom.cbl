@@ -16,8 +16,9 @@
            SELECT BOOKING-FILE ASSIGN TO '../DATA/BOOKING.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
-               RECORD KEY IS BOOKING-ID.
-
+               RECORD KEY IS BOOKING-ID
+               ALTERNATE RECORD KEY IS CHECKIN-DATE WITH DUPLICATES
+               ALTERNATE RECORD KEY IS CHECKOUT-DATE WITH DUPLICATES.
        DATA DIVISION.
        FILE SECTION.
        FD ROOMS-FILE.
@@ -59,10 +60,24 @@
        01 WS-VALID-FLAG      PIC X VALUE 'Y'.
        01 WS-TEMP-CHAR       PIC X.
        01 WS-TEMP-INDEX      PIC 9(4).
+       *> File status
+       01 WS-FILE-STATUS     PIC 99.
+
+       *> Auto-increment counters
+       01 WS-NEXT-CUSTOMER-ID PIC 9(5).
+       01 WS-NEXT-BOOKING-ID  PIC 9(5).
+       01 WS-EOF-FLAG         PIC X VALUE 'N'.
+       01 WS-EXISTING-CUSTOMER-FLAG PIC X VALUE 'N'.
+       *> Simple date fields
+       01 WS-CHECKIN-DATE     PIC 9(8) VALUE ZEROS.
+       01 WS-CHECKOUT-DATE    PIC 9(8) VALUE ZEROS.
+
+       *> No current date needed
        01 WS-ID-FOUND        PIC X VALUE 'N'.
        01 WS-EXIST-CHOICE    PIC X.
        LINKAGE SECTION.
        01 LINK PIC 9.
+       01 WS-DATE-TO-CHECK PIC 9(8).
 
        PROCEDURE DIVISION USING LINK.
 
@@ -137,6 +152,8 @@
 
        BOOK-ROOM.
            PERFORM VALIDATE-CUSTOMER-NAME
+           PERFORM VALIDATE-CHECKIN-DATE
+           PERFORM VALIDATE-CHECKOUT-DATE
 
            *> Check if customer exists by name
            OPEN INPUT CUSTOMER-FILE
@@ -288,6 +305,66 @@
            IF WS-CUSTOMER-ADDR = SPACES
                DISPLAY "Customer Address cannot be empty."
                GO TO VALIDATE-CUSTOMER-ADDR
+           END-IF.
+
+       VALIDATE-CHECKIN-DATE.
+           DISPLAY "Enter Check-in Date (YYYYMMDD): "
+           ACCEPT WS-CHECKIN-DATE
+           IF WS-CHECKIN-DATE = ZEROS OR WS-CHECKIN-DATE = SPACES
+               DISPLAY "Check-in date cannot be empty."
+               GO TO VALIDATE-CHECKIN-DATE
+           END-IF
+           PERFORM VALIDATE-DATE-FORMAT USING WS-CHECKIN-DATE
+           IF WS-VALID-FLAG = 'N'
+               DISPLAY "Invalid date format. Please use YYYYMMDD."
+               GO TO VALIDATE-CHECKIN-DATE
+           END-IF.
+
+       VALIDATE-CHECKOUT-DATE.
+           DISPLAY "Enter Check-out Date (YYYYMMDD): "
+           ACCEPT WS-CHECKOUT-DATE
+           IF WS-CHECKOUT-DATE = ZEROS OR WS-CHECKOUT-DATE = SPACES
+               DISPLAY "Check-out date cannot be empty."
+               GO TO VALIDATE-CHECKOUT-DATE
+           END-IF
+           PERFORM VALIDATE-DATE-FORMAT USING WS-CHECKOUT-DATE
+           IF WS-VALID-FLAG = 'N'
+               DISPLAY "Invalid date format. Please use YYYYMMDD."
+               GO TO VALIDATE-CHECKOUT-DATE
+           END-IF
+           IF WS-CHECKOUT-DATE <= WS-CHECKIN-DATE
+               DISPLAY "Check-out date must be after check-in date."
+               GO TO VALIDATE-CHECKOUT-DATE
+           END-IF.
+
+       VALIDATE-DATE-FORMAT USING WS-DATE-TO-CHECK.
+           MOVE 'Y' TO WS-VALID-FLAG
+           
+           *> Check if all characters are numeric
+           PERFORM VARYING WS-TEMP-INDEX FROM 1 BY 1 UNTIL WS-TEMP-INDEX > 8
+               MOVE WS-DATE-TO-CHECK(WS-TEMP-INDEX:1) TO WS-TEMP-CHAR
+               IF WS-TEMP-CHAR NOT NUMERIC
+                   MOVE 'N' TO WS-VALID-FLAG
+                   EXIT PERFORM
+               END-IF
+           END-PERFORM
+           
+           *> Basic range validation (not comprehensive)
+           IF WS-VALID-FLAG = 'Y'
+               EVALUATE WS-DATE-TO-CHECK(5:2)
+                   WHEN '01' WHEN '02' WHEN '03' WHEN '04' WHEN '05' WHEN '06'
+                   WHEN '07' WHEN '08' WHEN '09' WHEN '10' WHEN '11' WHEN '12'
+                       CONTINUE
+                   WHEN OTHER
+                       MOVE 'N' TO WS-VALID-FLAG
+               END-EVALUATE
+               
+               EVALUATE WS-DATE-TO-CHECK(7:2)
+                   WHEN '01' THRU '31'
+                       CONTINUE
+                   WHEN OTHER
+                       MOVE 'N' TO WS-VALID-FLAG
+               END-EVALUATE
            END-IF.
 
        END PROGRAM bookRoom.
