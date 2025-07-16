@@ -12,11 +12,11 @@
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS BOOKING-ID.
        DATA DIVISION.
- 
+
        FILE SECTION.
        FD  ROOMS-FILE.
        COPY "./CopyBooks/ROOMS.cpy".
- 
+
        FD  BOOKING-FILE.
        01  BOOKING-RECORD.
            05 BOOKING-ID      PIC 9(5).
@@ -28,7 +28,7 @@
            05 CHEKIN-FLAG     PIC X VALUE 'N'.
            05 CHECKOUT-FLAG   PIC X VALUE 'N'.
            05 CREATED-AT      PIC X(14).
- 
+
        WORKING-STORAGE SECTION.
        01 WS-CHOICE            PIC 9.
        01 WS-BOOKING-ID        PIC 9(5).
@@ -46,7 +46,7 @@
            05 WS-CURRENT-SECOND  PIC 9(2).
        LINKAGE SECTION.
        01 LINK PIC 9.
- 
+
        PROCEDURE DIVISION USING LINK.
        MAIN-PROCEDURE.
            DISPLAY "***************************************************"
@@ -68,25 +68,25 @@
                    GO TO MAIN-PROCEDURE
            END-EVALUATE.
            STOP RUN.
- 
+
        CHECK-BOOKING-ID-AND-CHECK-IN.
            MOVE 'N' TO WS-FOUND.
            OPEN I-O BOOKING-FILE.
- 
+
            *> Get the current system date
            ACCEPT WS-CURRENT-DATE-FIELDS FROM DATE YYYYMMDD.
            STRING WS-CURRENT-YEAR DELIMITED BY SIZE
                   WS-CURRENT-MONTH DELIMITED BY SIZE
                   WS-CURRENT-DAY DELIMITED BY SIZE
                   INTO WS-DATE-FORMATTED.
-           
+
             *> Get the current system time
            ACCEPT WS-CURRENT-TIME-FIELDS FROM TIME.
            STRING WS-CURRENT-HOUR DELIMITED BY SIZE
                   WS-CURRENT-MINUTE DELIMITED BY SIZE
                   WS-CURRENT-SECOND DELIMITED BY SIZE
                   INTO WS-TIME-FORMATTED.
- 
+
            MOVE WS-BOOKING-ID TO BOOKING-ID OF BOOKING-RECORD.
            READ BOOKING-FILE
                INVALID KEY
@@ -96,7 +96,12 @@
                NOT INVALID KEY
                    IF BOOKING-STATUS OF BOOKING-RECORD = 'Active'
                        IF CHEKIN-FLAG OF BOOKING-RECORD = 'N'
-                MOVE WS-DATE-FORMATTED TO CHECKIN-DATE OF BOOKING-RECORD
+                   IF WS-DATE-FORMATTED < CHECKIN-DATE OF BOOKING-RECORD
+                   DISPLAY "You cannot check in before CHECKIN-DATE: "
+                   CHECKIN-DATE OF BOOKING-RECORD
+                   CLOSE BOOKING-FILE
+                   GO TO MAIN-PROCEDURE
+                    END-IF
                 MOVE 'Y' TO CHEKIN-FLAG OF BOOKING-RECORD
                            REWRITE BOOKING-RECORD
                                INVALID KEY
@@ -104,7 +109,7 @@
                                NOT INVALID KEY
                DISPLAY "Check In Complete."
                DISPLAY "BOOKING-ID: " BOOKING-ID
-               DISPLAY "ROOM-ID-BK: " ROOM-ID-BK                
+               DISPLAY "ROOM-ID-BK: " ROOM-ID-BK
                DISPLAY "CHECKIN-DATE: " CHECKIN-DATE OF BOOKING-RECORD
                DISPLAY "CHECKIN-TIME: " WS-TIME-FORMATTED
                            END-REWRITE
@@ -125,9 +130,9 @@
                        GO TO MAIN-PROCEDURE
                    END-IF
            END-READ.
- 
+
            CLOSE BOOKING-FILE.
-           
+
            CHANGE-ROOM-STATUS.
            OPEN I-O ROOMS-FILE.
            MOVE 'N' TO WS-FOUND.
@@ -150,4 +155,3 @@
            END-PERFORM.
            CLOSE ROOMS-FILE.
        END PROGRAM checkIn.
- 
