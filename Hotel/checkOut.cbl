@@ -8,21 +8,23 @@
                   ACCESS MODE IS DYNAMIC
                   RECORD KEY IS ROOM-ID
                   FILE STATUS IS WS-ROOM-FILE-STATUS.
-           SELECT BOOKING-FILE ASSIGN TO '../DATA/BOOKING.DAT'
+           SELECT BOOKING-FILE ASSIGN TO '../DATA/BOOKINGS.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS BOOKING-ID
                ALTERNATE RECORD KEY IS CHECKIN-DATE WITH DUPLICATES
                ALTERNATE RECORD KEY IS CHECKOUT-DATE WITH DUPLICATES
                FILE STATUS IS WS-BOOKING-FILE-STATUS.
-           SELECT CUSTOMER-FILE ASSIGN TO '../DATA/CUSTOMER.DAT'
+           SELECT CUSTOMER-FILE ASSIGN TO '../DATA/CUSTOMERS.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS CUSTOMER-ID
                FILE STATUS IS WS-CUSTOMER-FILE-STATUS.
         DATA DIVISION.
         FILE SECTION.
-        FD  ROOMS-FILE.COPY "./CopyBooks/ROOMS.cpy".
+        FD  ROOMS-FILE.
+        COPY "./CopyBooks/ROOMS.cpy".
+
         FD  BOOKING-FILE.
         COPY "./CopyBooks/BOOKINGS.cpy".
         FD  CUSTOMER-FILE.
@@ -51,8 +53,10 @@
                05 FILLER PIC X(40) VALUE '============================'.
                05 FILLER PIC X(40) VALUE '      INVOICE               '.
                05 FILLER PIC X(40) VALUE '============================'.
-        01 LINK PIC 9.
 
+
+       LINKAGE SECTION.
+          01 LINK PIC 9.
         PROCEDURE DIVISION USING LINK.
 
            MAIN-PROCESS.
@@ -145,7 +149,7 @@
            DISPLAY "Name          : " CUSTOMER-NAME
            DISPLAY "Phone         : " CUSTOMER-PHONE
            DISPLAY "Email         : " CUSTOMER-EMAIL
-           DISPLAY "Address       : " CUSTOMER-ADDR
+           DISPLAY "Address       : " NRC-NUMBER
            DISPLAY " "
            DISPLAY "Booking Details:"
            DISPLAY "Room ID       : " ROOM-ID
@@ -173,17 +177,17 @@
            IF ACTIVE-BOOKING-COUNT NOT NUMERIC
                MOVE ZERO TO ACTIVE-BOOKING-COUNT
            END-IF
-           
+
            *> Update room status to Available and decrement active booking count
            MOVE 'Available' TO R-STATUS
-           
+
            *> Subtract 1 from active booking count (ensure it doesn't go below 0)
            IF ACTIVE-BOOKING-COUNT > 0
                SUBTRACT 1 FROM ACTIVE-BOOKING-COUNT
            ELSE
                MOVE 0 TO ACTIVE-BOOKING-COUNT
            END-IF
-           
+
            REWRITE ROOMS-RECORD
                INVALID KEY
                    DISPLAY "Error updating room status"

@@ -146,7 +146,7 @@
                WHEN 1
                    PERFORM BOOK-ROOM-PROCESS
                WHEN 9
-                   STOP RUN
+                    GOBACK
                WHEN OTHER
                    DISPLAY "Invalid option. Try again."
                    PERFORM BOOK-ROOM-RETRY
@@ -197,7 +197,7 @@
                            IF ACTIVE-BOOKING-COUNT NOT NUMERIC
                                MOVE ZERO TO ACTIVE-BOOKING-COUNT
                            END-IF
-                           
+
                            *> Only check conflicts if room has active bookings
                            IF ACTIVE-BOOKING-COUNT = 0
                                *> No active bookings, room is available
@@ -298,7 +298,7 @@
                        DISPLAY "ID: " CUSTOMER-ID
                        DISPLAY "Phone: " CUSTOMER-PHONE
                        DISPLAY "Email: " CUSTOMER-EMAIL
-                       DISPLAY "NRC: " CUSTOMER-ADDR
+                       DISPLAY "NRC: " NRC-NUMBER
                        DISPLAY "Use this customer? (Y/N): "
                            ACCEPT WS-EXIST-CHOICE
                       IF WS-EXIST-CHOICE = 'Y' OR WS-EXIST-CHOICE = 'y'
