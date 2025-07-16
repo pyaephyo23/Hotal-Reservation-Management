@@ -33,8 +33,10 @@
        01 WS-ROOM-ID         PIC X(5).
        01 WS-FOUND           PIC X VALUE 'N'.
 
-       01 LINK PIC 9.
 
+
+       LINKAGE SECTION.
+       01 LINK PIC 9.
        PROCEDURE DIVISION USING LINK.
        MAIN-PROCEDURE.
            DISPLAY "***************************************************"
@@ -96,23 +98,23 @@
                    IF ACTIVE-BOOKING-COUNT NOT NUMERIC
                        MOVE ZERO TO ACTIVE-BOOKING-COUNT
                    END-IF
-                   
+
                    *> Decrease active booking count (with bounds checking)
                    IF ACTIVE-BOOKING-COUNT > 0
                        SUBTRACT 1 FROM ACTIVE-BOOKING-COUNT
                    END-IF
-                   
+
                    *> Update room status based on remaining active bookings
                    IF ACTIVE-BOOKING-COUNT = 0
                        MOVE "Available" TO R-STATUS
                    END-IF
-                   
+
                    REWRITE ROOMS-RECORD
                        INVALID KEY
                          DISPLAY "Error: Unable to rewrite room record."
                        NOT INVALID KEY
-                           DISPLAY "Room ID " WS-ROOM-ID 
-                                   " updated. Active bookings: " 
+                           DISPLAY "Room ID " WS-ROOM-ID
+                                   " updated. Active bookings: "
                                    ACTIVE-BOOKING-COUNT
                    END-REWRITE
            END-READ
