@@ -80,6 +80,20 @@
        01 WS-DATE-TO-CHECK   PIC 9(8).
        01 WS-MAX-CHECKOUT-DATE PIC 9(8).
        01 WS-DAYS-DIFFERENCE PIC 9(3).
+       01 WS-DATE-YEAR       PIC 9(4).
+       01 WS-DATE-MONTH      PIC 9(2).
+       01 WS-DATE-DAY        PIC 9(2).
+       01 WS-IS-LEAP-YEAR    PIC X VALUE 'N'.
+       01 WS-MAX-DAYS        PIC 9(2).
+       01 WS-CHECKIN-YEAR    PIC 9(4).
+       01 WS-CHECKIN-MONTH   PIC 9(2).
+       01 WS-CHECKIN-DAY     PIC 9(2).
+       01 WS-CHECKOUT-YEAR   PIC 9(4).
+       01 WS-CHECKOUT-MONTH  PIC 9(2).
+       01 WS-CHECKOUT-DAY    PIC 9(2).
+       01 WS-TEMP-DAYS       PIC 9(3).
+       01 WS-YEAR-COUNTER    PIC 9(4).
+       01 WS-MONTH-COUNTER   PIC 9(2).
        LINKAGE SECTION.
        01 LINK PIC 9.
 
@@ -411,7 +425,6 @@
                    IF ACTIVE-BOOKING-COUNT NOT NUMERIC
                        MOVE ZERO TO ACTIVE-BOOKING-COUNT
                    END-IF
-                   MOVE 'Booked' TO R-STATUS
                    ADD 1 TO ACTIVE-BOOKING-COUNT
                    REWRITE ROOMS-RECORD
            END-READ
@@ -514,46 +527,161 @@
                END-IF
            END-PERFORM
 
-           *> Basic range validation (not comprehensive)
+           *> If basic format is valid, perform comprehensive validation
            IF WS-VALID-FLAG = 'Y'
-            EVALUATE WS-DATE-TO-CHECK(5:2)
-             WHEN '01' WHEN '02' WHEN '03' WHEN '04' WHEN '05' WHEN '06'
-             WHEN '07' WHEN '08' WHEN '09' WHEN '10' WHEN '11' WHEN '12'
-                       CONTINUE
-                   WHEN OTHER
-                       MOVE 'N' TO WS-VALID-FLAG
-               END-EVALUATE
+               *> Extract date components
+               MOVE WS-DATE-TO-CHECK(1:4) TO WS-DATE-YEAR
+               MOVE WS-DATE-TO-CHECK(5:2) TO WS-DATE-MONTH
+               MOVE WS-DATE-TO-CHECK(7:2) TO WS-DATE-DAY
+               
+               *> Validate year (reasonable range: 2020-2050)
+               IF WS-DATE-YEAR < 2020 OR WS-DATE-YEAR > 2050
+                   MOVE 'N' TO WS-VALID-FLAG
+               END-IF
+               
+               *> Validate month (1-12)
+               IF WS-DATE-MONTH < 1 OR WS-DATE-MONTH > 12
+                   MOVE 'N' TO WS-VALID-FLAG
+               END-IF
+               
+               *> Validate day (1-31, depending on month and leap year)
+               IF WS-DATE-DAY < 1 OR WS-DATE-DAY > 31
+                   MOVE 'N' TO WS-VALID-FLAG
+               END-IF
+               
+               *> If basic ranges are valid, check month-specific day limits
+               IF WS-VALID-FLAG = 'Y'
+                   PERFORM CHECK-LEAP-YEAR
+                   PERFORM VALIDATE-DAYS-IN-MONTH
+               END-IF
+           END-IF.
 
-               EVALUATE WS-DATE-TO-CHECK(7:2)
-                   WHEN '01' THRU '31'
-                       CONTINUE
-                   WHEN OTHER
-                       MOVE 'N' TO WS-VALID-FLAG
-               END-EVALUATE
+       CHECK-LEAP-YEAR.
+           MOVE 'N' TO WS-IS-LEAP-YEAR
+           
+           *> Leap year logic:
+           *> - Divisible by 4 AND
+           *> - If divisible by 100, must also be divisible by 400
+           IF FUNCTION MOD(WS-DATE-YEAR, 4) = 0
+               IF FUNCTION MOD(WS-DATE-YEAR, 100) = 0
+                   IF FUNCTION MOD(WS-DATE-YEAR, 400) = 0
+                       MOVE 'Y' TO WS-IS-LEAP-YEAR
+                   END-IF
+               ELSE
+                   MOVE 'Y' TO WS-IS-LEAP-YEAR
+               END-IF
+           END-IF.
+
+       VALIDATE-DAYS-IN-MONTH.
+           *> Set maximum days for each month
+           EVALUATE WS-DATE-MONTH
+               WHEN 1  *> January
+               WHEN 3  *> March
+               WHEN 5  *> May
+               WHEN 7  *> July
+               WHEN 8  *> August
+               WHEN 10 *> October
+               WHEN 12 *> December
+                   MOVE 31 TO WS-MAX-DAYS
+               WHEN 4  *> April
+               WHEN 6  *> June
+               WHEN 9  *> September
+               WHEN 11 *> November
+                   MOVE 30 TO WS-MAX-DAYS
+               WHEN 2  *> February
+                   IF WS-IS-LEAP-YEAR = 'Y'
+                       MOVE 29 TO WS-MAX-DAYS
+                   ELSE
+                       MOVE 28 TO WS-MAX-DAYS
+                   END-IF
+           END-EVALUATE
+           
+           *> Check if day is valid for the month
+           IF WS-DATE-DAY > WS-MAX-DAYS
+               MOVE 'N' TO WS-VALID-FLAG
+               DISPLAY "Invalid day for month " WS-DATE-MONTH 
+                       ". Maximum days: " WS-MAX-DAYS
+               IF WS-DATE-MONTH = 2 AND WS-IS-LEAP-YEAR = 'Y'
+                   DISPLAY "(" WS-DATE-YEAR " is a leap year)"
+               END-IF
            END-IF.
 
        CALCULATE-DAYS-DIFFERENCE.
-           *> Simple approximation: calculate difference in days
-           *> This is a simplified calculation that works for most cases
-           *> but may not be 100% accurate across month/year boundaries
+           *> Enhanced date difference calculation with leap year consideration
+           *> Extract date components from both dates
+           MOVE WS-CHECKIN-DATE(1:4) TO WS-CHECKIN-YEAR
+           MOVE WS-CHECKIN-DATE(5:2) TO WS-CHECKIN-MONTH
+           MOVE WS-CHECKIN-DATE(7:2) TO WS-CHECKIN-DAY
            
-           *> Extract year, month, day from both dates
-           COMPUTE WS-DAYS-DIFFERENCE = 
-               ((WS-CHECKOUT-DATE / 10000) - (WS-CHECKIN-DATE / 10000)) * 365
-               + (((WS-CHECKOUT-DATE / 100) - (WS-CHECKIN-DATE / 100)) 
-                  - ((WS-CHECKOUT-DATE / 10000) - (WS-CHECKIN-DATE / 10000)) * 100) * 30
-               + ((WS-CHECKOUT-DATE - (WS-CHECKOUT-DATE / 100) * 100) 
-                  - (WS-CHECKIN-DATE - (WS-CHECKIN-DATE / 100) * 100))
+           MOVE WS-CHECKOUT-DATE(1:4) TO WS-CHECKOUT-YEAR
+           MOVE WS-CHECKOUT-DATE(5:2) TO WS-CHECKOUT-MONTH
+           MOVE WS-CHECKOUT-DATE(7:2) TO WS-CHECKOUT-DAY
            
-           *> If result is negative or seems wrong, use simple difference
-           IF WS-DAYS-DIFFERENCE < 0 OR WS-DAYS-DIFFERENCE > 365
+           MOVE ZERO TO WS-DAYS-DIFFERENCE
+           
+           *> If same year and month, simple day difference
+           IF WS-CHECKIN-YEAR = WS-CHECKOUT-YEAR AND
+              WS-CHECKIN-MONTH = WS-CHECKOUT-MONTH
                COMPUTE WS-DAYS-DIFFERENCE = 
-                   (WS-CHECKOUT-DATE - WS-CHECKIN-DATE)
+                   WS-CHECKOUT-DAY - WS-CHECKIN-DAY
+           ELSE
+               *> Calculate across months/years
+               PERFORM CALCULATE-COMPLEX-DATE-DIFFERENCE
+           END-IF
+           
+           *> Ensure result is reasonable (fallback protection)
+           IF WS-DAYS-DIFFERENCE < 0 OR WS-DAYS-DIFFERENCE > 400
+               DISPLAY "Warning: Date calculation may be inaccurate"
+               *> Use simplified calculation as fallback
+               COMPUTE WS-DAYS-DIFFERENCE = 
+                   (WS-CHECKOUT-YEAR - WS-CHECKIN-YEAR) * 365
+                   + (WS-CHECKOUT-MONTH - WS-CHECKIN-MONTH) * 30
+                   + (WS-CHECKOUT-DAY - WS-CHECKIN-DAY)
                
-               *> Simple validation - if difference is unreasonable, default to safe value
-               IF WS-DAYS-DIFFERENCE > 100 OR WS-DAYS-DIFFERENCE < 0
-                   MOVE 30 TO WS-DAYS-DIFFERENCE
+               *> Ensure minimum reasonable result
+               IF WS-DAYS-DIFFERENCE < 1
+                   MOVE 1 TO WS-DAYS-DIFFERENCE
+               END-IF
+               IF WS-DAYS-DIFFERENCE > 365
+                   MOVE 365 TO WS-DAYS-DIFFERENCE
                END-IF
            END-IF.
+
+       CALCULATE-COMPLEX-DATE-DIFFERENCE.
+           *> Step 1: Add remaining days in check-in month
+           MOVE WS-CHECKIN-YEAR TO WS-DATE-YEAR
+           MOVE WS-CHECKIN-MONTH TO WS-DATE-MONTH
+           PERFORM CHECK-LEAP-YEAR
+           PERFORM VALIDATE-DAYS-IN-MONTH
+           COMPUTE WS-TEMP-DAYS = WS-MAX-DAYS - WS-CHECKIN-DAY
+           ADD WS-TEMP-DAYS TO WS-DAYS-DIFFERENCE
+           
+           *> Step 2: Add full months between check-in and check-out
+           MOVE WS-CHECKIN-YEAR TO WS-YEAR-COUNTER
+           MOVE WS-CHECKIN-MONTH TO WS-MONTH-COUNTER
+           
+           PERFORM UNTIL (WS-YEAR-COUNTER = WS-CHECKOUT-YEAR AND 
+                         WS-MONTH-COUNTER = WS-CHECKOUT-MONTH)
+               *> Move to next month
+               ADD 1 TO WS-MONTH-COUNTER
+               IF WS-MONTH-COUNTER > 12
+                   MOVE 1 TO WS-MONTH-COUNTER
+                   ADD 1 TO WS-YEAR-COUNTER
+               END-IF
+               
+               *> Don't add days for the checkout month
+               IF NOT (WS-YEAR-COUNTER = WS-CHECKOUT-YEAR AND 
+                      WS-MONTH-COUNTER = WS-CHECKOUT-MONTH)
+                   *> Get days in this month
+                   MOVE WS-YEAR-COUNTER TO WS-DATE-YEAR
+                   MOVE WS-MONTH-COUNTER TO WS-DATE-MONTH
+                   PERFORM CHECK-LEAP-YEAR
+                   PERFORM VALIDATE-DAYS-IN-MONTH
+                   ADD WS-MAX-DAYS TO WS-DAYS-DIFFERENCE
+               END-IF
+           END-PERFORM
+           
+           *> Step 3: Add days in checkout month
+           ADD WS-CHECKOUT-DAY TO WS-DAYS-DIFFERENCE.
 
        END PROGRAM bookRoom.
