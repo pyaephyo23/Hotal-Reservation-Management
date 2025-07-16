@@ -22,27 +22,12 @@
                FILE STATUS IS WS-CUSTOMER-FILE-STATUS.
         DATA DIVISION.
         FILE SECTION.
-        FD  ROOMS-FILE.
-           01  ROOMS-RECORD.
-               05  ROOM-ID             PIC X(5).
-               05  ROOM-TYPE           PIC X(10).
-               05  PRICE-PER-NIGHT     PIC 9(9).
-               05  R-STATUS            PIC X(10).
+        FD  ROOMS-FILE.COPY "./CopyBooks/ROOMS.cpy".
         FD  BOOKING-FILE.
-           01  BOOKING-RECORD.
-               05  BOOKING-ID       PIC 9(5).
-               05  ROOM-ID-BK       PIC X(5).
-               05  CUSTOMER-ID-BK   PIC 9(6).
-               05  CHECKIN-DATE     PIC X(8).
-               05  CHECKOUT-DATE    PIC X(8).
-               05  BOOKING-STATUS   PIC X(10).
+        COPY "./CopyBooks/BOOKINGS.cpy".
         FD  CUSTOMER-FILE.
-           01  CUSTOMER-RECORD.
-               05  CUSTOMER-ID      PIC 9(5).
-               05  CUSTOMER-NAME    PIC X(30).
-               05  CUSTOMER-PHONE   PIC X(15).
-               05  CUSTOMER-EMAIL   PIC X(30).
-               05  CUSTOMER-ADDR    PIC X(50).
+        COPY "./CopyBooks/CUSTOMERS.cpy".
+
         WORKING-STORAGE SECTION.
            01 WS-BOOKING-ID           PIC 9(5).
            01 WS-ROOM-FILE-STATUS     PIC 99.
@@ -66,8 +51,10 @@
                05 FILLER PIC X(40) VALUE '============================'.
                05 FILLER PIC X(40) VALUE '      INVOICE               '.
                05 FILLER PIC X(40) VALUE '============================'.
+        01 LINK PIC 9.
 
-        PROCEDURE DIVISION.
+        PROCEDURE DIVISION USING LINK.
+
            MAIN-PROCESS.
            DISPLAY "Hotel Check-Out System"
            DISPLAY "===================="
@@ -90,7 +77,7 @@
            END-IF
 
            PERFORM CLOSE-FILES
-           STOP RUN.
+           GOBACK.
 
         OPEN-FILES.
            OPEN I-O ROOMS-FILE BOOKING-FILE
@@ -182,14 +169,28 @@
            DISPLAY " ".
 
         UPDATE-ROOM-STATUS.
-           MOVE 'AVAILABLE' TO R-STATUS
+           *> Initialize ACTIVE-BOOKING-COUNT if it contains non-numeric data
+           IF ACTIVE-BOOKING-COUNT NOT NUMERIC
+               MOVE ZERO TO ACTIVE-BOOKING-COUNT
+           END-IF
+           
+           *> Update room status to Available and decrement active booking count
+           MOVE 'Available' TO R-STATUS
+           
+           *> Subtract 1 from active booking count (ensure it doesn't go below 0)
+           IF ACTIVE-BOOKING-COUNT > 0
+               SUBTRACT 1 FROM ACTIVE-BOOKING-COUNT
+           ELSE
+               MOVE 0 TO ACTIVE-BOOKING-COUNT
+           END-IF
+           
            REWRITE ROOMS-RECORD
                INVALID KEY
                    DISPLAY "Error updating room status"
            END-REWRITE.
 
         UPDATE-BOOKING-STATUS.
-           MOVE 'COMPLETED' TO BOOKING-STATUS
+           MOVE 'Completed' TO BOOKING-STATUS
            REWRITE BOOKING-RECORD
                INVALID KEY
                    DISPLAY "Error updating booking status"
