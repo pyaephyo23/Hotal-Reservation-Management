@@ -162,7 +162,7 @@
                    WS-CHECKOUT-DAY - WS-CHECKIN-DAY
            ELSE
                *> Calculate across months/years
-               PERFORM CALCULATE-COMPLEX-DATE-DIFFERENCE
+               PERFORM CALC-COMPLEX-DATE-DIFF
            END-IF
            
            *> Ensure result is reasonable (fallback protection)
@@ -289,7 +289,7 @@
         CLOSE-FILES.
            CLOSE ROOMS-FILE BOOKING-FILE CUSTOMER-FILE.
 
-        CALCULATE-COMPLEX-DATE-DIFFERENCE.
+        CALC-COMPLEX-DATE-DIFF.
            *> Step 1: Add remaining days in check-in month
            MOVE WS-CHECKIN-YEAR TO WS-DATE-YEAR
            MOVE WS-CHECKIN-MONTH TO WS-DATE-MONTH
