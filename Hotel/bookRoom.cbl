@@ -31,11 +31,11 @@
        WORKING-STORAGE SECTION.
        01 WS-ROOM-ID         PIC X(5).
        01 WS-FOUND           PIC X VALUE 'N'.
-       01 WS-CUSTOMER-ID     PIC 9(6) VALUE ZEROS.
+       01 WS-CUSTOMER-ID     PIC 9(5) VALUE ZEROS.
        01 WS-CUSTOMER-NAME   PIC X(30).
        01 WS-CUSTOMER-PHONE  PIC X(15).
        01 WS-CUSTOMER-EMAIL  PIC X(30).
-       01 WS-CUSTOMER-ADDR   PIC X(50).
+       01 WS-NRC-NUMBER      PIC X(40).
        01 WS-BOOKING-ID      PIC 9(5) VALUE ZEROS.
        01 WS-CHOICE          PIC 9.
        01 WS-VALID-FLAG      PIC X VALUE 'Y'.
@@ -53,7 +53,7 @@
        01 WS-FILE-STATUS     PIC 99.
 
        *> Auto-increment counters
-       01 WS-NEXT-CUSTOMER-ID PIC 9(6).
+       01 WS-NEXT-CUSTOMER-ID PIC 9(5).
        01 WS-NEXT-BOOKING-ID  PIC 9(5).
        01 WS-EOF-FLAG         PIC X VALUE 'N'.
        01 WS-EXISTING-CUSTOMER-FLAG PIC X VALUE 'N'.
@@ -298,7 +298,7 @@
                        DISPLAY "ID: " CUSTOMER-ID
                        DISPLAY "Phone: " CUSTOMER-PHONE
                        DISPLAY "Email: " CUSTOMER-EMAIL
-                       DISPLAY "Address: " CUSTOMER-ADDR
+                       DISPLAY "NRC: " CUSTOMER-ADDR
                        DISPLAY "Use this customer? (Y/N): "
                            ACCEPT WS-EXIST-CHOICE
                       IF WS-EXIST-CHOICE = 'Y' OR WS-EXIST-CHOICE = 'y'
@@ -320,7 +320,7 @@
            DISPLAY "Creating new customer record..."
            PERFORM VALIDATE-CUSTOMER-PHONE
            PERFORM VALIDATE-CUSTOMER-EMAIL
-           PERFORM VALIDATE-CUSTOMER-ADDR
+           PERFORM VALIDATE-NRC-NUMBER
 
            *> Find next customer ID
            OPEN INPUT CUSTOMER-FILE
@@ -346,7 +346,7 @@
            MOVE WS-CUSTOMER-NAME TO CUSTOMER-NAME
            MOVE WS-CUSTOMER-PHONE TO CUSTOMER-PHONE
            MOVE WS-CUSTOMER-EMAIL TO CUSTOMER-EMAIL
-           MOVE WS-CUSTOMER-ADDR TO CUSTOMER-ADDR
+           MOVE WS-NRC-NUMBER TO NRC-NUMBER
 
            OPEN I-O CUSTOMER-FILE
            WRITE CUSTOMER-RECORD
@@ -439,12 +439,12 @@
                GO TO VALIDATE-CUSTOMER-EMAIL
            END-IF.
 
-       VALIDATE-CUSTOMER-ADDR.
-           DISPLAY "Enter Customer Address: "
-           ACCEPT WS-CUSTOMER-ADDR
-           IF WS-CUSTOMER-ADDR = SPACES
-               DISPLAY "Customer Address cannot be empty."
-               GO TO VALIDATE-CUSTOMER-ADDR
+       VALIDATE-NRC-NUMBER.
+           DISPLAY "Enter Customer NRC Number: "
+           ACCEPT WS-NRC-NUMBER
+           IF WS-NRC-NUMBER = SPACES
+               DISPLAY "Customer NRC Number cannot be empty."
+               GO TO VALIDATE-NRC-NUMBER
            END-IF.
 
        VALIDATE-CHECKIN-DATE.

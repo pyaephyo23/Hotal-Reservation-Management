@@ -32,11 +32,14 @@
        01 WS-BOOKING-ID      PIC 9(5).
        01 WS-ROOM-ID         PIC X(5).
        01 WS-FOUND           PIC X VALUE 'N'.
-       PROCEDURE DIVISION.
+
+       01 LINK PIC 9.
+
+       PROCEDURE DIVISION USING LINK.
        MAIN-PROCEDURE.
            DISPLAY "***************************************************"
            DISPLAY "1. Cancel Booking"
-           DISPLAY "9. Exit"
+           DISPLAY "9. Go Back"
            DISPLAY "***************************************************"
            ACCEPT WS-CHOICE
            EVALUATE WS-CHOICE
@@ -46,7 +49,7 @@
                    PERFORM CANCEL-BOOKING-PROCESS
                    GO TO MAIN-PROCEDURE
                WHEN 9
-                   STOP RUN
+                   GOBACK
                WHEN OTHER
                    DISPLAY "Invalid option. Try again."
                    GO TO MAIN-PROCEDURE
@@ -54,7 +57,7 @@
        CANCEL-BOOKING-PROCESS.
            MOVE 'N' TO WS-FOUND
            OPEN I-O BOOKING-FILE
-          MOVE WS-BOOKING-ID to NRC
+           MOVE WS-BOOKING-ID TO BOOKING-ID
            READ BOOKING-FILE KEY IS BOOKING-ID
                INVALID KEY
                    DISPLAY "Invalid Booking ID."
@@ -89,17 +92,29 @@
                INVALID KEY
                    DISPLAY "Associated Room not found."
                NOT INVALID KEY
-                   IF R-STATUS = 'Booked'
-                       MOVE "Available" TO R-STATUS
-                       REWRITE ROOMS-RECORD
-                           INVALID KEY
-                         DISPLAY "Error: Unable to rewrite room record."
-                           NOT INVALID KEY
-                      DISPLAY "Room ID " WS-ROOM-ID " is now Available."
-                       END-REWRITE
-                   ELSE
-                  DISPLAY "Room " WS-ROOM-ID " is not currently Booked."
+                   *> Initialize ACTIVE-BOOKING-COUNT if it contains non-numeric data
+                   IF ACTIVE-BOOKING-COUNT NOT NUMERIC
+                       MOVE ZERO TO ACTIVE-BOOKING-COUNT
                    END-IF
+                   
+                   *> Decrease active booking count (with bounds checking)
+                   IF ACTIVE-BOOKING-COUNT > 0
+                       SUBTRACT 1 FROM ACTIVE-BOOKING-COUNT
+                   END-IF
+                   
+                   *> Update room status based on remaining active bookings
+                   IF ACTIVE-BOOKING-COUNT = 0
+                       MOVE "Available" TO R-STATUS
+                   END-IF
+                   
+                   REWRITE ROOMS-RECORD
+                       INVALID KEY
+                         DISPLAY "Error: Unable to rewrite room record."
+                       NOT INVALID KEY
+                           DISPLAY "Room ID " WS-ROOM-ID 
+                                   " updated. Active bookings: " 
+                                   ACTIVE-BOOKING-COUNT
+                   END-REWRITE
            END-READ
            CLOSE ROOMS-FILE.
        END PROGRAM cancelBooking.
