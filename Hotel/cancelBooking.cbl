@@ -66,7 +66,7 @@
                    CLOSE BOOKING-FILE
                    EXIT PARAGRAPH
                NOT INVALID KEY
-                   IF BOOKING-STATUS = 'Active'
+                   IF BOOKING-STATUS = 'Active' AND CHEKIN-FLAG ='N'
                        MOVE "Cancelled" TO BOOKING-STATUS
                        MOVE ROOM-ID-BK TO WS-ROOM-ID
                        REWRITE BOOKING-RECORD
