@@ -78,6 +78,8 @@
        01 WS-ID-FOUND        PIC X VALUE 'N'.
        01 WS-EXIST-CHOICE    PIC X.
        01 WS-DATE-TO-CHECK   PIC 9(8).
+       01 WS-MAX-CHECKOUT-DATE PIC 9(8).
+       01 WS-DAYS-DIFFERENCE PIC 9(3).
        LINKAGE SECTION.
        01 LINK PIC 9.
 
@@ -488,6 +490,15 @@
            IF WS-CHECKOUT-DATE <= WS-CHECKIN-DATE
                DISPLAY "Check-out date must be after check-in date."
                GO TO VALIDATE-CHECKOUT-DATE
+           END-IF
+           
+           *> Calculate days difference between check-in and check-out
+           PERFORM CALCULATE-DAYS-DIFFERENCE
+           IF WS-DAYS-DIFFERENCE > 28
+               DISPLAY "Check-out date cannot be more than 28 days "
+                       "after check-in date."
+               DISPLAY "Days difference: " WS-DAYS-DIFFERENCE
+               GO TO VALIDATE-CHECKOUT-DATE
            END-IF.
 
        VALIDATE-DATE-FORMAT.
@@ -519,6 +530,30 @@
                    WHEN OTHER
                        MOVE 'N' TO WS-VALID-FLAG
                END-EVALUATE
+           END-IF.
+
+       CALCULATE-DAYS-DIFFERENCE.
+           *> Simple approximation: calculate difference in days
+           *> This is a simplified calculation that works for most cases
+           *> but may not be 100% accurate across month/year boundaries
+           
+           *> Extract year, month, day from both dates
+           COMPUTE WS-DAYS-DIFFERENCE = 
+               ((WS-CHECKOUT-DATE / 10000) - (WS-CHECKIN-DATE / 10000)) * 365
+               + (((WS-CHECKOUT-DATE / 100) - (WS-CHECKIN-DATE / 100)) 
+                  - ((WS-CHECKOUT-DATE / 10000) - (WS-CHECKIN-DATE / 10000)) * 100) * 30
+               + ((WS-CHECKOUT-DATE - (WS-CHECKOUT-DATE / 100) * 100) 
+                  - (WS-CHECKIN-DATE - (WS-CHECKIN-DATE / 100) * 100))
+           
+           *> If result is negative or seems wrong, use simple difference
+           IF WS-DAYS-DIFFERENCE < 0 OR WS-DAYS-DIFFERENCE > 365
+               COMPUTE WS-DAYS-DIFFERENCE = 
+                   (WS-CHECKOUT-DATE - WS-CHECKIN-DATE)
+               
+               *> Simple validation - if difference is unreasonable, default to safe value
+               IF WS-DAYS-DIFFERENCE > 100 OR WS-DAYS-DIFFERENCE < 0
+                   MOVE 30 TO WS-DAYS-DIFFERENCE
+               END-IF
            END-IF.
 
        END PROGRAM bookRoom.

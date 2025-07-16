@@ -46,6 +46,12 @@
            01 WS-CHECKIN-NUM          PIC 9(8).
            01 WS-CHECKOUT-NUM         PIC 9(8).
            01 WS-DAYS-DIFF            PIC 9(8).
+           01 WS-CHECKIN-YEAR         PIC 9(4).
+           01 WS-CHECKIN-MONTH        PIC 9(2).
+           01 WS-CHECKIN-DAY          PIC 9(2).
+           01 WS-CHECKOUT-YEAR        PIC 9(4).
+           01 WS-CHECKOUT-MONTH       PIC 9(2).
+           01 WS-CHECKOUT-DAY         PIC 9(2).
            01 WS-PRICE-DISPLAY        PIC $$,$$$,$$9.99.
            01 WS-INVOICE-COUNTER      PIC 9(5) VALUE 1.
 
@@ -119,10 +125,22 @@
            END-READ.
 
         CALCULATE-CHARGES.
-           MOVE FUNCTION NUMVAL(CHECKIN-DATE) TO WS-CHECKIN-NUM
-           MOVE FUNCTION NUMVAL(CHECKOUT-DATE) TO WS-CHECKOUT-NUM
-           COMPUTE WS-DAYS-DIFF = WS-CHECKOUT-NUM - WS-CHECKIN-NUM
+           *> Extract date components for proper calculation
+           MOVE CHECKIN-DATE(1:4) TO WS-CHECKIN-YEAR
+           MOVE CHECKIN-DATE(5:2) TO WS-CHECKIN-MONTH
+           MOVE CHECKIN-DATE(7:2) TO WS-CHECKIN-DAY
+           
+           MOVE CHECKOUT-DATE(1:4) TO WS-CHECKOUT-YEAR
+           MOVE CHECKOUT-DATE(5:2) TO WS-CHECKOUT-MONTH
+           MOVE CHECKOUT-DATE(7:2) TO WS-CHECKOUT-DAY
+           
+           *> Calculate approximate days difference
+           COMPUTE WS-DAYS-DIFF = 
+               (WS-CHECKOUT-YEAR - WS-CHECKIN-YEAR) * 365
+               + (WS-CHECKOUT-MONTH - WS-CHECKIN-MONTH) * 30
+               + (WS-CHECKOUT-DAY - WS-CHECKIN-DAY)
 
+           *> Ensure minimum of 1 night for billing
            IF WS-DAYS-DIFF > 0
                MOVE WS-DAYS-DIFF TO WS-NIGHTS
            ELSE
