@@ -203,7 +203,7 @@
            DISPLAY "Select Room Type:"
            DISPLAY "1. Single"
            DISPLAY "2. Double"
-           DISPLAY "3. Deluxe"
+           DISPLAY "3. Delux"
            DISPLAY "0. Cancel booking"
            DISPLAY "Enter choice (1-3) or 0 to cancel: "
            ACCEPT WS-CHOICE
@@ -217,7 +217,7 @@
                WHEN 2
                    MOVE 'Double' TO WS-ROOM-TYPE
                WHEN 3
-                   MOVE 'Deluxe' TO WS-ROOM-TYPE
+                   MOVE 'Delux' TO WS-ROOM-TYPE
                WHEN OTHER
                    DISPLAY "Invalid choice. Please try again."
                    GO TO VALIDATE-ROOM-TYPE
@@ -274,7 +274,7 @@
            END-IF.
 
        DISPLAY-AVAILABLE-ROOMS.
-           DISPLAY "Available " WS-ROOM-TYPE " rooms:"
+           DISPLAY "Available " FUNCTION TRIM(WS-ROOM-TYPE) " rooms:"
            DISPLAY "============================================"
            PERFORM VARYING WS-TEMP-INDEX FROM 1 BY 1
                    UNTIL WS-TEMP-INDEX > WS-AVAILABLE-COUNT

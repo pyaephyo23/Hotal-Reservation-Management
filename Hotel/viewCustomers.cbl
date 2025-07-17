@@ -21,49 +21,49 @@
        01  WS-CUSTOMER-COUNTER     PIC 999 VALUE 0.
        01  MENU-CHOICE             PIC 9.
        01  WS-FILE-STATUS          PIC 99.
-       01  WS-SEARCH-NAME          PIC X(30).
-       01  WS-SEARCH-NAME-UPPER    PIC X(30).
-       01  WS-CUSTOMER-NAME-UPPER  PIC X(30).
+       01  WS-SEARCH-NAME          PIC X(20).
+       01  WS-SEARCH-NAME-UPPER    PIC X(20).
+       01  WS-CUSTOMER-NAME-UPPER  PIC X(20).
 
        01  WS-HEADER-1.
            05 FILLER               PIC X(11) VALUE 'CUSTOMER ID'.
            05 FILLER               PIC X(3) VALUE SPACES.
            05 FILLER               PIC X(4) VALUE 'NAME'.
-           05 FILLER               PIC X(29) VALUE SPACES.
+           05 FILLER               PIC X(19) VALUE SPACES.
            05 FILLER               PIC X(5) VALUE 'PHONE'.
            05 FILLER               PIC X(14) VALUE SPACES.
            05 FILLER               PIC X(5) VALUE 'EMAIL'.
            05 FILLER               PIC X(29) VALUE SPACES.
-           05 FILLER               PIC X(7) VALUE 'ADDRESS'.
+           05 FILLER               PIC X(10) VALUE 'NRC NUMBER'.
 
        01  WS-HEADER-2.
-           05 FILLER               PIC X(10) VALUE '----------'.
+           05 FILLER               PIC X(11) VALUE '-----------'.
            05 FILLER               PIC X(3) VALUE SPACES.
-           05 FILLER               PIC X(30)
-           VALUE '------------------------------'.
+           05 FILLER               PIC X(20)
+           VALUE '--------------------'.
            05 FILLER               PIC X(3) VALUE SPACES.
            05 FILLER               PIC X(15) VALUE '---------------'.
-           05 FILLER               PIC X(3) VALUE SPACES.
+           05 FILLER               PIC X(4) VALUE SPACES.
            05 FILLER               PIC X(30)
            VALUE '------------------------------'.
-           05 FILLER               PIC X(3) VALUE SPACES.
-           05 FILLER               PIC X(50)
-           VALUE '--------------------------------------------------'.
+           05 FILLER               PIC X(4) VALUE SPACES.
+           05 FILLER               PIC X(40)
+           VALUE '------------------'.
 
        01  WS-DETAIL-LINE.
-           05 WS-DL-CUSTOMER-ID    PIC Z(4)9.
-           05 FILLER               PIC X(3) VALUE SPACES.
-           05 WS-DL-NAME           PIC X(30).
+           05 WS-DL-CUSTOMER-ID    PIC Z(5)9.
+           05 FILLER               PIC X(8) VALUE SPACES.
+           05 WS-DL-NAME           PIC X(20).
            05 FILLER               PIC X(3) VALUE SPACES.
            05 WS-DL-PHONE          PIC X(15).
-           05 FILLER               PIC X(3) VALUE SPACES.
+           05 FILLER               PIC X(4) VALUE SPACES.
            05 WS-DL-EMAIL          PIC X(30).
-           05 FILLER               PIC X(3) VALUE SPACES.
-           05 WS-DL-ADDRESS        PIC X(50).
+           05 FILLER               PIC X(4) VALUE SPACES.
+           05 WS-NRC-NUMBER        PIC X(40).
 
        LINKAGE SECTION.
        01 LINK PIC 9.
-
+s
        PROCEDURE DIVISION USING LINK.
 
        MAIN-LOOP.
@@ -190,7 +190,7 @@
            MOVE CUSTOMER-NAME TO WS-DL-NAME
            MOVE CUSTOMER-PHONE TO WS-DL-PHONE
            MOVE CUSTOMER-EMAIL TO WS-DL-EMAIL
-           MOVE NRC-NUMBER TO WS-DL-ADDRESS
+           MOVE NRC-NUMBER TO WS-NRC-NUMBER
            DISPLAY WS-DETAIL-LINE.
 
        DISPLAY-SUMMARY.

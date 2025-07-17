@@ -37,7 +37,7 @@
                WHEN 5 PERFORM CHECK-OUT
                WHEN 6 PERFORM VIEW-ROOMS
                WHEN 7 PERFORM GENERATE-REPORT
-               WHEN 8 PERFORM VIEW-CUSTOMERS          
+               WHEN 8 PERFORM VIEW-CUSTOMERS
                WHEN 9 STOP RUN
                WHEN OTHER DISPLAY "Invalid choice"
            END-EVALUATE
@@ -59,5 +59,5 @@
        VIEW-CUSTOMERS.
            CALL 'viewCustomers'.
        GENERATE-REPORT.
-       *>    CALL 'generateReport'.
+           CALL 'generateReport'.
        END PROGRAM Main.
