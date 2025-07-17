@@ -19,10 +19,10 @@
        DATA DIVISION.
        FILE SECTION.
        FD  BOOKING-FILE.
-       COPY "./CopyBooks/BOOKINGS.cpy".
+       COPY "../CopyBooks/BOOKINGS.cpy".
 
        FD  ROOM-FILE.
-       COPY "./CopyBooks/ROOMS.cpy".
+       COPY "../CopyBooks/ROOMS.cpy".
 
        WORKING-STORAGE SECTION.
        01  WS-BOOKING-FILE-STATUS  PIC 99.

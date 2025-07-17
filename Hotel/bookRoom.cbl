@@ -77,9 +77,9 @@
        *> No current date needed
        01 WS-ID-FOUND        PIC X VALUE 'N'.
        01 WS-EXIST-CHOICE    PIC X.
-       01 WS-DATE-TO-CHECK   PIC 9(8).
        01 WS-MAX-CHECKOUT-DATE PIC 9(8).
        01 WS-DAYS-DIFFERENCE PIC 9(3).
+       01 WS-DATE-TO-CHECK   PIC 9(8).
        01 WS-DATE-YEAR       PIC 9(4).
        01 WS-DATE-MONTH      PIC 9(2).
        01 WS-DATE-DAY        PIC 9(2).

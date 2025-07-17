@@ -34,7 +34,7 @@
        WORKING-STORAGE SECTION.
        01  WS-EOF                     PIC X VALUE 'N'.
        01  WS-INVOICE-COUNTER         PIC 999 VALUE 0.
-       01  WS-TOTAL-AMOUNT            PIC 9(9)V99 VALUE 0.
+       01  WS-TOTAL-AMOUNT            PIC 9(9) VALUE 0.
        01  MENU-CHOICE                PIC 9.
        01  WS-INVOICE-FILE-STATUS     PIC 99.
        01  WS-BOOKING-FILE-STATUS     PIC 99.
@@ -74,13 +74,13 @@
            05 FILLER               PIC X(4) VALUE SPACES.
            05 WS-DL-BOOKING-ID     PIC Z(5)9.
            05 FILLER               PIC X(4) VALUE SPACES.
-           05 WS-DL-ROOM-CHARGE    PIC $$$,$$9.99.
+           05 WS-DL-ROOM-CHARGE    PIC $(9).
            05 FILLER               PIC X(2) VALUE SPACES.
-           05 WS-DL-SERVICE        PIC $$$9.99.
-           05 FILLER               PIC X(2) VALUE SPACES.
-           05 WS-DL-TAX-RATE       PIC Z9.
+           05 WS-DL-SERVICE        PIC $(9).
+           05 FILLER               PIC X(5) VALUE SPACES.
+           05 WS-DL-TAX-RATE       PIC 9(2).
            05 FILLER               PIC X(3) VALUE SPACES.
-           05 WS-DL-TOTAL          PIC $$$,$$9.99.
+           05 WS-DL-TOTAL          PIC $(9).
 
        01  WS-CUSTOMER-INFO-LINE.
            05 FILLER               PIC X(15) VALUE 'Customer: '.
@@ -263,10 +263,16 @@
            DISPLAY WS-HEADER-2.
 
        READ-AND-DISPLAY-ALL.
-           START INVOICE-FILE KEY IS GREATER THAN OR EQUAL TO INVOICE-ID
-           READ INVOICE-FILE NEXT RECORD
-               AT END MOVE 'Y' TO WS-EOF
-           END-READ
+           *> Always start from the lowest possible key to avoid duplicates or missing records
+           MOVE 0 TO INVOICE-ID
+           START INVOICE-FILE KEY IS NOT LESS THAN INVOICE-ID
+               INVALID KEY MOVE 'Y' TO WS-EOF
+           END-START
+           IF WS-EOF NOT = 'Y'
+               READ INVOICE-FILE NEXT RECORD
+                   AT END MOVE 'Y' TO WS-EOF
+               END-READ
+           END-IF
 
            PERFORM UNTIL WS-EOF = 'Y'
                PERFORM DISPLAY-INVOICE-RECORD
@@ -282,7 +288,11 @@
            MOVE BOOKING-ID-IV TO WS-DL-BOOKING-ID
            MOVE ROOM-CHARGE TO WS-DL-ROOM-CHARGE
            MOVE SERVICE-CHARGE TO WS-DL-SERVICE
-           MOVE TAX-RATE TO WS-DL-TAX-RATE
+           IF TAX-RATE NUMERIC
+               MOVE TAX-RATE TO WS-DL-TAX-RATE
+           ELSE
+               MOVE 15 TO WS-DL-TAX-RATE
+           END-IF
            MOVE TOTAL-CHARGE TO WS-DL-TOTAL
            DISPLAY WS-DETAIL-LINE.
 
