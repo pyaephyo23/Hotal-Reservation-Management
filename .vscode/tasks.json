@@ -1,0 +1,23 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Compile generateReport",
+			"type": "shell",
+			"command": "cobc",
+			"args": [
+				"-x",
+				"-I",
+				"CopyBooks",
+				"generateReport.cbl",
+				"-o",
+				"bin/generateReport.exe"
+			],
+			"group": "build",
+			"isBackground": false,
+			"problemMatcher": [
+				"$gcc"
+			]
+		}
+	]
+}

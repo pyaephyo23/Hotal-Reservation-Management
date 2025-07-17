@@ -57,7 +57,7 @@
                      WS-INDEX
                      DELIMITED BY SIZE
                      INTO ROOM-ID
-               MOVE 'Deluxe' TO ROOM-TYPE
+               MOVE 'Delux' TO ROOM-TYPE
                MOVE 120000 TO PRICE-PER-NIGHT
                MOVE 'Available' TO R-STATUS
                WRITE ROOMS-RECORD

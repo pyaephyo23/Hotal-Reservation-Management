@@ -11,9 +11,11 @@
            SELECT BOOKING-FILE ASSIGN TO '../DATA/BOOKINGS.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
-               RECORD KEY IS BOOKING-ID
-               ALTERNATE RECORD KEY IS CHECKIN-DATE WITH DUPLICATES
-               ALTERNATE RECORD KEY IS CHECKOUT-DATE WITH DUPLICATES.
+               RECORD KEY IS BOOKING-ID.
+           SELECT INVOICE-FILE ASSIGN TO '../DATA/INVOICES.DAT'
+               ORGANIZATION IS INDEXED
+               ACCESS MODE IS DYNAMIC
+               RECORD KEY IS INVOICE-ID.
        DATA DIVISION.
 
        FILE SECTION.
@@ -23,6 +25,9 @@
        FD  BOOKING-FILE.
        COPY "./CopyBooks/BOOKINGS.cpy".
 
+       FD  INVOICE-FILE.
+       COPY "./CopyBooks/INVOICES.cpy".
+
        WORKING-STORAGE SECTION.
        01 WS-DUMMY-VALUE     PIC X VALUE ' '.
        01  WS-FILE-STATUS    PIC 99.
@@ -30,10 +35,12 @@
        BEGIN.
            OPEN OUTPUT CUSTOMER-FILE
            OPEN OUTPUT BOOKING-FILE
+           OPEN OUTPUT INVOICE-FILE
 
            *> Optionally write a dummy record, or just close to create empty files
            CLOSE CUSTOMER-FILE
            CLOSE BOOKING-FILE
+           CLOSE INVOICE-FILE
 
-           DISPLAY "Files initialized."
+           DISPLAY "Files initialized (CUSTOMERS, BOOKINGS, INVOICES)."
            STOP RUN.
