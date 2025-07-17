@@ -20,6 +20,11 @@
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS CUSTOMER-ID
                FILE STATUS IS WS-CUSTOMER-FILE-STATUS.
+           SELECT INVOICES-FILE ASSIGN TO '../DATA/INVOICES.DAT'
+               ORGANIZATION IS INDEXED
+               ACCESS MODE IS DYNAMIC
+               RECORD KEY IS INVOICE-ID
+               FILE STATUS IS WS-INVOICE-FILE-STATUS.
         DATA DIVISION.
         FILE SECTION.
         FD  ROOMS-FILE.
@@ -29,20 +34,23 @@
         COPY "./CopyBooks/BOOKINGS.cpy".
         FD  CUSTOMER-FILE.
         COPY "./CopyBooks/CUSTOMERS.cpy".
+        FD  INVOICES-FILE.
+        COPY "./CopyBooks/INVOICES.cpy".
 
         WORKING-STORAGE SECTION.
            01 WS-BOOKING-ID           PIC 9(5).
            01 WS-ROOM-FILE-STATUS     PIC 99.
            01 WS-BOOKING-FILE-STATUS  PIC 99.
            01 WS-CUSTOMER-FILE-STATUS PIC 99.
+           01 WS-INVOICE-FILE-STATUS  PIC 99.
            01 WS-FOUND-FLAG           PIC X VALUE 'N'.
            01 WS-INVOICE-ID           PIC Z(5).
            01 WS-CURRENT-DATE         PIC X(8).
            01 WS-NIGHTS               PIC 9(3).
-           01 WS-SUBTOTAL             PIC 9(7)V99.
-           01 WS-TAX                  PIC 9(7)V99.
-           01 WS-TOTAL                PIC 9(7)V99.
-           01 WS-SERVICE-CHARGES      PIC 9(7)V99.
+           01 WS-SUBTOTAL             PIC 9(9).
+           01 WS-TAX                  PIC 9(9).
+           01 WS-TOTAL                PIC 9(9).
+           01 WS-SERVICE-CHARGES      PIC 9(9).
            01 WS-TAX-RATE             PIC V99 VALUE 0.15.
            01 WS-DAYS-DIFF            PIC 9(8).
            01 WS-CHECKIN-YEAR         PIC 9(4).
@@ -52,7 +60,7 @@
            01 WS-CHECKOUT-MONTH       PIC 9(2).
            01 WS-CHECKOUT-DAY         PIC 9(2).
            01 WS-PRICE-DISPLAY        PIC $$,$$$,$$9.99.
-           01 WS-INVOICE-COUNTER      PIC 9(5) VALUE 1.
+           01 WS-INVOICE-COUNTER      PIC 9(5).
            01 WS-CURRENT-DATE-NUM     PIC 9(8).
            01 WS-ORIGINAL-CHECKOUT    PIC 9(8).
            01 WS-EARLY-CHECKOUT-FLAG  PIC X VALUE 'N'.
@@ -64,6 +72,7 @@
            01 WS-DATE-YEAR            PIC 9(4).
            01 WS-DATE-MONTH           PIC 9(2).
            01 WS-DATE-DAY             PIC 9(2).
+           01 WS-EOF-INVOICE         PIC X.
 
            01 WS-INVOICE-HEADER.
                05 FILLER PIC X(40) VALUE '============================'.
@@ -84,6 +93,7 @@
            ACCEPT WS-SERVICE-CHARGES
 
            PERFORM OPEN-FILES
+           PERFORM GET-NEXT-INVOICE-ID
            PERFORM SEARCH-BOOKING
            IF WS-FOUND-FLAG = 'Y'
                PERFORM CHECK-AND-UPDATE-CHECKOUT-DATE
@@ -105,12 +115,32 @@
         OPEN-FILES.
            OPEN I-O ROOMS-FILE BOOKING-FILE
            OPEN INPUT CUSTOMER-FILE
+           OPEN I-O INVOICES-FILE
            IF WS-ROOM-FILE-STATUS NOT = 00 OR
               WS-BOOKING-FILE-STATUS NOT = 00 OR
-              WS-CUSTOMER-FILE-STATUS NOT = 00
+              WS-CUSTOMER-FILE-STATUS NOT = 00 OR
+              WS-INVOICE-FILE-STATUS NOT = 00
                DISPLAY "Error opening files"
                STOP RUN
            END-IF.
+
+       GET-NEXT-INVOICE-ID.
+           OPEN INPUT INVOICES-FILE
+           MOVE 0 TO WS-INVOICE-COUNTER
+           MOVE 'N' TO WS-EOF-INVOICE
+
+           PERFORM UNTIL WS-EOF-INVOICE = 'Y'
+               READ INVOICES-FILE NEXT
+                   AT END
+                       MOVE 'Y' TO WS-EOF-INVOICE
+                   NOT AT END
+                       IF INVOICE-ID > WS-INVOICE-COUNTER
+                           MOVE INVOICE-ID TO WS-INVOICE-COUNTER
+                       END-IF
+               END-READ
+           END-PERFORM
+           CLOSE INVOICES-FILE
+           ADD 1 TO WS-INVOICE-COUNTER.
 
         SEARCH-BOOKING.
            MOVE WS-BOOKING-ID TO BOOKING-ID
@@ -147,32 +177,55 @@
            MOVE CHECKIN-DATE(1:4) TO WS-CHECKIN-YEAR
            MOVE CHECKIN-DATE(5:2) TO WS-CHECKIN-MONTH
            MOVE CHECKIN-DATE(7:2) TO WS-CHECKIN-DAY
-           
+
            MOVE CHECKOUT-DATE(1:4) TO WS-CHECKOUT-YEAR
            MOVE CHECKOUT-DATE(5:2) TO WS-CHECKOUT-MONTH
            MOVE CHECKOUT-DATE(7:2) TO WS-CHECKOUT-DAY
-           
+
            *> Enhanced date difference calculation
            MOVE ZERO TO WS-DAYS-DIFF
-           
+
            *> If same year and month, simple day difference
            IF WS-CHECKIN-YEAR = WS-CHECKOUT-YEAR AND
               WS-CHECKIN-MONTH = WS-CHECKOUT-MONTH
-               COMPUTE WS-DAYS-DIFF = 
+               COMPUTE WS-DAYS-DIFF =
                    WS-CHECKOUT-DAY - WS-CHECKIN-DAY
            ELSE
                *> Calculate across months/years
                PERFORM CALC-COMPLEX-DATE-DIFF
            END-IF
-           
-           *> Ensure result is reasonable (fallback protection)
+
            IF WS-DAYS-DIFF < 0 OR WS-DAYS-DIFF > 400
                DISPLAY "Warning: Date calculation may be inaccurate"
-               *> Use simplified calculation as fallback
-               COMPUTE WS-DAYS-DIFF = 
-                   (WS-CHECKOUT-YEAR - WS-CHECKIN-YEAR) * 365
-                   + (WS-CHECKOUT-MONTH - WS-CHECKIN-MONTH) * 30
-                   + (WS-CHECKOUT-DAY - WS-CHECKIN-DAY)
+               *> Accurate fallback calculation considering leap years
+               MOVE 0 TO WS-DAYS-DIFF
+               MOVE WS-CHECKIN-YEAR TO WS-YEAR-COUNTER
+               MOVE WS-CHECKIN-MONTH TO WS-MONTH-COUNTER
+               MOVE WS-CHECKIN-DAY TO WS-DATE-DAY
+
+               PERFORM UNTIL (WS-YEAR-COUNTER = WS-CHECKOUT-YEAR AND
+                              WS-MONTH-COUNTER = WS-CHECKOUT-MONTH AND
+                              WS-DATE-DAY = WS-CHECKOUT-DAY)
+                   ADD 1 TO WS-DATE-DAY
+                   MOVE WS-YEAR-COUNTER TO WS-DATE-YEAR
+                   MOVE WS-MONTH-COUNTER TO WS-DATE-MONTH
+                   PERFORM CHECK-LEAP-YEAR
+                   PERFORM VALIDATE-DAYS-IN-MONTH
+                   IF WS-DATE-DAY > WS-MAX-DAYS
+                       MOVE 1 TO WS-DATE-DAY
+                       ADD 1 TO WS-MONTH-COUNTER
+                       IF WS-MONTH-COUNTER > 12
+                           MOVE 1 TO WS-MONTH-COUNTER
+                           ADD 1 TO WS-YEAR-COUNTER
+                       END-IF
+                   END-IF
+                   ADD 1 TO WS-DAYS-DIFF
+                   IF WS-YEAR-COUNTER = WS-CHECKOUT-YEAR AND
+                      WS-MONTH-COUNTER = WS-CHECKOUT-MONTH AND
+                      WS-DATE-DAY = WS-CHECKOUT-DAY
+                       EXIT PERFORM
+                   END-IF
+               END-PERFORM
            END-IF
 
            *> Ensure minimum of 1 night for billing
@@ -183,19 +236,51 @@
            END-IF
 
            COMPUTE WS-SUBTOTAL = PRICE-PER-NIGHT * WS-NIGHTS
-           COMPUTE WS-TAX = (WS-SUBTOTAL + WS-SERVICE-CHARGES) * 
+           COMPUTE WS-TAX = (WS-SUBTOTAL + WS-SERVICE-CHARGES) *
                              WS-TAX-RATE
            COMPUTE WS-TOTAL = WS-SUBTOTAL + WS-SERVICE-CHARGES + WS-TAX.
 
         GENERATE-INVOICE.
            ACCEPT WS-CURRENT-DATE FROM DATE YYYYMMDD
-           MOVE WS-CURRENT-DATE TO WS-CURRENT-DATE
-           MOVE WS-INVOICE-COUNTER TO WS-INVOICE-ID
+           OPEN INPUT INVOICES-FILE
+           MOVE 0 TO WS-INVOICE-COUNTER
+           MOVE 'N' TO WS-EOF-INVOICE
+
+           PERFORM UNTIL WS-EOF-INVOICE = 'Y'
+               READ INVOICES-FILE NEXT
+                   AT END
+                       MOVE 'Y' TO WS-EOF-INVOICE
+                   NOT AT END
+                       IF INVOICE-ID > WS-INVOICE-COUNTER
+                           MOVE INVOICE-ID TO WS-INVOICE-COUNTER
+                       END-IF
+               END-READ
+           END-PERFORM
+           CLOSE INVOICES-FILE
+           ADD 1 TO WS-INVOICE-COUNTER
+
+           *> Prepare invoice record for writing (only required fields)
+           MOVE WS-INVOICE-COUNTER TO INVOICE-ID
+           MOVE BOOKING-ID         TO BOOKING-ID-IV
+           MOVE WS-SUBTOTAL        TO ROOM-CHARGE
+           MOVE WS-SERVICE-CHARGES TO SERVICE-CHARGE
+           MOVE 15                 TO TAX-RATE
+           MOVE WS-TOTAL           TO TOTAL-CHARGE
+
+           OPEN I-O INVOICES-FILE
+           WRITE INVOICE-RECORD
+               INVALID KEY
+                   DISPLAY "Error writing invoice to file"
+               NOT INVALID KEY
+                   DISPLAY "Invoice record written to file"
+           END-WRITE
+           DISPLAY "INVOICES-FILE write successful"
+           CLOSE INVOICES-FILE
 
            DISPLAY "========================================"
            DISPLAY "              INVOICE                  "
            DISPLAY "========================================"
-           DISPLAY "Invoice ID    : " WS-INVOICE-ID
+           DISPLAY "Invoice ID    : " INVOICE-ID
            DISPLAY "Booking ID    : " BOOKING-ID
            DISPLAY "Invoice Date  : " WS-CURRENT-DATE
            DISPLAY " "
@@ -265,7 +350,7 @@
            *> Get current date
            ACCEPT WS-CURRENT-DATE-NUM FROM DATE YYYYMMDD
            MOVE CHECKOUT-DATE TO WS-ORIGINAL-CHECKOUT
-           
+
            *> Check if current date is earlier than scheduled checkout
            IF WS-CURRENT-DATE-NUM < CHECKOUT-DATE
                DISPLAY "Early checkout detected."
@@ -273,7 +358,7 @@
                DISPLAY "Actual checkout date: " WS-CURRENT-DATE-NUM
                MOVE WS-CURRENT-DATE-NUM TO CHECKOUT-DATE
                MOVE 'Y' TO WS-EARLY-CHECKOUT-FLAG
-               
+
                *> Update the booking record with new checkout date
                REWRITE BOOKING-RECORD
                    INVALID KEY
@@ -287,7 +372,7 @@
            END-IF.
 
         CLOSE-FILES.
-           CLOSE ROOMS-FILE BOOKING-FILE CUSTOMER-FILE.
+           CLOSE ROOMS-FILE BOOKING-FILE CUSTOMER-FILE INVOICES-FILE.
 
         CALC-COMPLEX-DATE-DIFF.
            *> Step 1: Add remaining days in check-in month
@@ -297,12 +382,12 @@
            PERFORM VALIDATE-DAYS-IN-MONTH
            COMPUTE WS-TEMP-DAYS = WS-MAX-DAYS - WS-CHECKIN-DAY
            ADD WS-TEMP-DAYS TO WS-DAYS-DIFF
-           
+
            *> Step 2: Add full months between check-in and check-out
            MOVE WS-CHECKIN-YEAR TO WS-YEAR-COUNTER
            MOVE WS-CHECKIN-MONTH TO WS-MONTH-COUNTER
-           
-           PERFORM UNTIL (WS-YEAR-COUNTER = WS-CHECKOUT-YEAR AND 
+
+           PERFORM UNTIL (WS-YEAR-COUNTER = WS-CHECKOUT-YEAR AND
                          WS-MONTH-COUNTER = WS-CHECKOUT-MONTH)
                *> Move to next month
                ADD 1 TO WS-MONTH-COUNTER
@@ -310,9 +395,9 @@
                    MOVE 1 TO WS-MONTH-COUNTER
                    ADD 1 TO WS-YEAR-COUNTER
                END-IF
-               
+
                *> Don't add days for the checkout month
-               IF NOT (WS-YEAR-COUNTER = WS-CHECKOUT-YEAR AND 
+               IF NOT (WS-YEAR-COUNTER = WS-CHECKOUT-YEAR AND
                       WS-MONTH-COUNTER = WS-CHECKOUT-MONTH)
                    *> Get days in this month
                    MOVE WS-YEAR-COUNTER TO WS-DATE-YEAR
@@ -322,13 +407,13 @@
                    ADD WS-MAX-DAYS TO WS-DAYS-DIFF
                END-IF
            END-PERFORM
-           
+
            *> Step 3: Add days in checkout month
            ADD WS-CHECKOUT-DAY TO WS-DAYS-DIFF.
 
         CHECK-LEAP-YEAR.
            MOVE 'N' TO WS-IS-LEAP-YEAR
-           
+
            *> Leap year logic:
            *> - Divisible by 4 AND
            *> - If divisible by 100, must also be divisible by 400
@@ -366,4 +451,4 @@
                    END-IF
            END-EVALUATE.
 
-        END PROGRAM checkOut.
+           END PROGRAM checkOut.

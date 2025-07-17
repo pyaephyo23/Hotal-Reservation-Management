@@ -1,5 +1,5 @@
        IDENTIFICATION DIVISION.
-       PROGRAM-ID. INITFILES.
+       PROGRAM-ID. initFiles.
        ENVIRONMENT DIVISION.
        INPUT-OUTPUT SECTION.
        FILE-CONTROL.
@@ -44,3 +44,4 @@
 
            DISPLAY "Files initialized (CUSTOMERS, BOOKINGS, INVOICES)."
            STOP RUN.
+       END PROGRAM initFiles.
