@@ -69,7 +69,7 @@
            05 FILLER               PIC X(3) VALUE SPACES.
            05 FILLER               PIC X(7) VALUE '-------'.
            05 FILLER               PIC X(3) VALUE SPACES.
-           05 FILLER               PIC X(3) VALUE '---'.
+           05 FILLER               PIC X(4) VALUE '----'.
            05 FILLER               PIC X(5) VALUE SPACES.
            05 FILLER               PIC X(12) VALUE '------------'.
 
@@ -85,7 +85,8 @@
            05 WS-DL-SERVICE        PIC $(9).
            05 FILLER               PIC X(5) VALUE SPACES.
            05 WS-DL-TAX-RATE       PIC 9(2).
-           05 FILLER               PIC X(3) VALUE SPACES.
+           05 FILLER               PIC X VALUE '%'.
+           05 FILLER               PIC X(2) VALUE SPACES.
            05 WS-DL-TOTAL          PIC $(9).
 
        01  WS-CUSTOMER-INFO-LINE.

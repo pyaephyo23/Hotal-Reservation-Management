@@ -12,8 +12,6 @@
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS BOOKING-ID
-               ALTERNATE RECORD KEY IS CHECKIN-DATE WITH DUPLICATES
-               ALTERNATE RECORD KEY IS CHECKOUT-DATE WITH DUPLICATES
                FILE STATUS IS WS-BOOKING-FILE-STATUS.
            SELECT CUSTOMER-FILE ASSIGN TO '../DATA/CUSTOMERS.DAT'
                ORGANIZATION IS INDEXED
@@ -60,17 +58,9 @@
            01 WS-CHECKOUT-DAY         PIC 9(2).
            01 WS-PRICE-DISPLAY        PIC $$,$$$,$$9.
            01 WS-INVOICE-COUNTER      PIC 9(5).
-           01 WS-CURRENT-DATE-NUM     PIC 9(8).
+           01 WS-CURRENT-DATE         PIC 9(8).
            01 WS-ORIGINAL-CHECKOUT    PIC 9(8).
            01 WS-EARLY-CHECKOUT-FLAG  PIC X VALUE 'N'.
-           01 WS-IS-LEAP-YEAR         PIC X VALUE 'N'.
-           01 WS-MAX-DAYS             PIC 9(2).
-           01 WS-TEMP-DAYS            PIC 9(3).
-           01 WS-YEAR-COUNTER         PIC 9(4).
-           01 WS-MONTH-COUNTER        PIC 9(2).
-           01 WS-DATE-YEAR            PIC 9(4).
-           01 WS-DATE-MONTH           PIC 9(2).
-           01 WS-DATE-DAY             PIC 9(2).
            01 WS-EOF-INVOICE         PIC X.
 
            01 WS-INVOICE-HEADER.
@@ -172,60 +162,9 @@
            END-READ.
 
         CALCULATE-CHARGES.
-           *> Extract date components for proper calculation
-           MOVE CHECKIN-DATE(1:4) TO WS-CHECKIN-YEAR
-           MOVE CHECKIN-DATE(5:2) TO WS-CHECKIN-MONTH
-           MOVE CHECKIN-DATE(7:2) TO WS-CHECKIN-DAY
-
-           MOVE CHECKOUT-DATE(1:4) TO WS-CHECKOUT-YEAR
-           MOVE CHECKOUT-DATE(5:2) TO WS-CHECKOUT-MONTH
-           MOVE CHECKOUT-DATE(7:2) TO WS-CHECKOUT-DAY
-
-           *> Enhanced date difference calculation
-           MOVE ZERO TO WS-DAYS-DIFF
-
-           *> If same year and month, simple day difference
-           IF WS-CHECKIN-YEAR = WS-CHECKOUT-YEAR AND
-              WS-CHECKIN-MONTH = WS-CHECKOUT-MONTH
-               COMPUTE WS-DAYS-DIFF =
-                   WS-CHECKOUT-DAY - WS-CHECKIN-DAY
-           ELSE
-               *> Calculate across months/years
-               PERFORM CALC-COMPLEX-DATE-DIFF
-           END-IF
-
-           IF WS-DAYS-DIFF < 0 OR WS-DAYS-DIFF > 400
-               DISPLAY "Warning: Date calculation may be inaccurate"
-               *> Accurate fallback calculation considering leap years
-               MOVE 0 TO WS-DAYS-DIFF
-               MOVE WS-CHECKIN-YEAR TO WS-YEAR-COUNTER
-               MOVE WS-CHECKIN-MONTH TO WS-MONTH-COUNTER
-               MOVE WS-CHECKIN-DAY TO WS-DATE-DAY
-
-               PERFORM UNTIL (WS-YEAR-COUNTER = WS-CHECKOUT-YEAR AND
-                              WS-MONTH-COUNTER = WS-CHECKOUT-MONTH AND
-                              WS-DATE-DAY = WS-CHECKOUT-DAY)
-                   ADD 1 TO WS-DATE-DAY
-                   MOVE WS-YEAR-COUNTER TO WS-DATE-YEAR
-                   MOVE WS-MONTH-COUNTER TO WS-DATE-MONTH
-                   PERFORM CHECK-LEAP-YEAR
-                   PERFORM VALIDATE-DAYS-IN-MONTH
-                   IF WS-DATE-DAY > WS-MAX-DAYS
-                       MOVE 1 TO WS-DATE-DAY
-                       ADD 1 TO WS-MONTH-COUNTER
-                       IF WS-MONTH-COUNTER > 12
-                           MOVE 1 TO WS-MONTH-COUNTER
-                           ADD 1 TO WS-YEAR-COUNTER
-                       END-IF
-                   END-IF
-                   ADD 1 TO WS-DAYS-DIFF
-                   IF WS-YEAR-COUNTER = WS-CHECKOUT-YEAR AND
-                      WS-MONTH-COUNTER = WS-CHECKOUT-MONTH AND
-                      WS-DATE-DAY = WS-CHECKOUT-DAY
-                       EXIT PERFORM
-                   END-IF
-               END-PERFORM
-           END-IF
+           COMPUTE WS-DAYS-DIFF =
+           FUNCTION INTEGER-OF-DATE(CHECKOUT-DATE) -
+           FUNCTION INTEGER-OF-DATE(CHECKIN-DATE)
 
            *> Ensure minimum of 1 night for billing
            IF WS-DAYS-DIFF > 0
@@ -264,8 +203,8 @@
            MOVE WS-SERVICE-CHARGES TO SERVICE-CHARGE
            MOVE 15                 TO TAX-RATE
            MOVE WS-TOTAL           TO TOTAL-CHARGE
-           ACCEPT WS-CURRENT-DATE-NUM FROM DATE YYYYMMDD
-           MOVE   WS-CURRENT-DATE-NUM TO CREATED-AT-IV
+           ACCEPT WS-CURRENT-DATE FROM DATE YYYYMMDD
+           MOVE   WS-CURRENT-DATE TO CREATED-AT-IV
 
            OPEN I-O INVOICES-FILE
            WRITE INVOICE-RECORD
@@ -348,15 +287,16 @@
 
         CHECK-AND-UPDATE-CHECKOUT-DATE.
            *> Get current date
-           ACCEPT WS-CURRENT-DATE-NUM FROM DATE YYYYMMDD
+           ACCEPT WS-CURRENT-DATE FROM DATE YYYYMMDD
            MOVE CHECKOUT-DATE TO WS-ORIGINAL-CHECKOUT
 
            *> Check if current date is earlier than scheduled checkout
-           IF WS-CURRENT-DATE-NUM < CHECKOUT-DATE
+           IF FUNCTION INTEGER-OF-DATE(WS-CURRENT-DATE) <
+               FUNCTION INTEGER-OF-DATE(CHECKOUT-DATE)
                DISPLAY "Early checkout detected."
                DISPLAY "Original checkout date: " CHECKOUT-DATE
-               DISPLAY "Actual checkout date: " WS-CURRENT-DATE-NUM
-               MOVE WS-CURRENT-DATE-NUM TO CHECKOUT-DATE
+               DISPLAY "Actual checkout date: " WS-CURRENT-DATE
+               MOVE WS-CURRENT-DATE TO CHECKOUT-DATE
                MOVE 'Y' TO WS-EARLY-CHECKOUT-FLAG
 
                *> Update the booking record with new checkout date
@@ -373,82 +313,4 @@
 
         CLOSE-FILES.
            CLOSE ROOMS-FILE BOOKING-FILE CUSTOMER-FILE INVOICES-FILE.
-
-        CALC-COMPLEX-DATE-DIFF.
-           *> Step 1: Add remaining days in check-in month
-           MOVE WS-CHECKIN-YEAR TO WS-DATE-YEAR
-           MOVE WS-CHECKIN-MONTH TO WS-DATE-MONTH
-           PERFORM CHECK-LEAP-YEAR
-           PERFORM VALIDATE-DAYS-IN-MONTH
-           COMPUTE WS-TEMP-DAYS = WS-MAX-DAYS - WS-CHECKIN-DAY
-           ADD WS-TEMP-DAYS TO WS-DAYS-DIFF
-
-           *> Step 2: Add full months between check-in and check-out
-           MOVE WS-CHECKIN-YEAR TO WS-YEAR-COUNTER
-           MOVE WS-CHECKIN-MONTH TO WS-MONTH-COUNTER
-
-           PERFORM UNTIL (WS-YEAR-COUNTER = WS-CHECKOUT-YEAR AND
-                         WS-MONTH-COUNTER = WS-CHECKOUT-MONTH)
-               *> Move to next month
-               ADD 1 TO WS-MONTH-COUNTER
-               IF WS-MONTH-COUNTER > 12
-                   MOVE 1 TO WS-MONTH-COUNTER
-                   ADD 1 TO WS-YEAR-COUNTER
-               END-IF
-
-               *> Don't add days for the checkout month
-               IF NOT (WS-YEAR-COUNTER = WS-CHECKOUT-YEAR AND
-                      WS-MONTH-COUNTER = WS-CHECKOUT-MONTH)
-                   *> Get days in this month
-                   MOVE WS-YEAR-COUNTER TO WS-DATE-YEAR
-                   MOVE WS-MONTH-COUNTER TO WS-DATE-MONTH
-                   PERFORM CHECK-LEAP-YEAR
-                   PERFORM VALIDATE-DAYS-IN-MONTH
-                   ADD WS-MAX-DAYS TO WS-DAYS-DIFF
-               END-IF
-           END-PERFORM
-
-           *> Step 3: Add days in checkout month
-           ADD WS-CHECKOUT-DAY TO WS-DAYS-DIFF.
-
-        CHECK-LEAP-YEAR.
-           MOVE 'N' TO WS-IS-LEAP-YEAR
-
-           *> Leap year logic:
-           *> - Divisible by 4 AND
-           *> - If divisible by 100, must also be divisible by 400
-           IF FUNCTION MOD(WS-DATE-YEAR, 4) = 0
-               IF FUNCTION MOD(WS-DATE-YEAR, 100) = 0
-                   IF FUNCTION MOD(WS-DATE-YEAR, 400) = 0
-                       MOVE 'Y' TO WS-IS-LEAP-YEAR
-                   END-IF
-               ELSE
-                   MOVE 'Y' TO WS-IS-LEAP-YEAR
-               END-IF
-           END-IF.
-
-        VALIDATE-DAYS-IN-MONTH.
-           *> Set maximum days for each month
-           EVALUATE WS-DATE-MONTH
-               WHEN 1  *> January
-               WHEN 3  *> March
-               WHEN 5  *> May
-               WHEN 7  *> July
-               WHEN 8  *> August
-               WHEN 10 *> October
-               WHEN 12 *> December
-                   MOVE 31 TO WS-MAX-DAYS
-               WHEN 4  *> April
-               WHEN 6  *> June
-               WHEN 9  *> September
-               WHEN 11 *> November
-                   MOVE 30 TO WS-MAX-DAYS
-               WHEN 2  *> February
-                   IF WS-IS-LEAP-YEAR = 'Y'
-                       MOVE 29 TO WS-MAX-DAYS
-                   ELSE
-                       MOVE 28 TO WS-MAX-DAYS
-                   END-IF
-           END-EVALUATE.
-
            END PROGRAM checkOut.
