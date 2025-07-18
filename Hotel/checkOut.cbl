@@ -45,7 +45,6 @@
            01 WS-INVOICE-FILE-STATUS  PIC 99.
            01 WS-FOUND-FLAG           PIC X VALUE 'N'.
            01 WS-INVOICE-ID           PIC Z(5).
-           01 WS-CURRENT-DATE         PIC X(8).
            01 WS-NIGHTS               PIC 9(3).
            01 WS-SUBTOTAL             PIC 9(9).
            01 WS-TAX                  PIC 9(9).
@@ -59,7 +58,7 @@
            01 WS-CHECKOUT-YEAR        PIC 9(4).
            01 WS-CHECKOUT-MONTH       PIC 9(2).
            01 WS-CHECKOUT-DAY         PIC 9(2).
-           01 WS-PRICE-DISPLAY        PIC $$,$$$,$$9.99.
+           01 WS-PRICE-DISPLAY        PIC $$,$$$,$$9.
            01 WS-INVOICE-COUNTER      PIC 9(5).
            01 WS-CURRENT-DATE-NUM     PIC 9(8).
            01 WS-ORIGINAL-CHECKOUT    PIC 9(8).
@@ -241,7 +240,6 @@
            COMPUTE WS-TOTAL = WS-SUBTOTAL + WS-SERVICE-CHARGES + WS-TAX.
 
         GENERATE-INVOICE.
-           ACCEPT WS-CURRENT-DATE FROM DATE YYYYMMDD
            OPEN INPUT INVOICES-FILE
            MOVE 0 TO WS-INVOICE-COUNTER
            MOVE 'N' TO WS-EOF-INVOICE
@@ -266,6 +264,8 @@
            MOVE WS-SERVICE-CHARGES TO SERVICE-CHARGE
            MOVE 15                 TO TAX-RATE
            MOVE WS-TOTAL           TO TOTAL-CHARGE
+           ACCEPT WS-CURRENT-DATE-NUM FROM DATE YYYYMMDD
+           MOVE   WS-CURRENT-DATE-NUM TO CREATED-AT-IV
 
            OPEN I-O INVOICES-FILE
            WRITE INVOICE-RECORD
@@ -282,7 +282,7 @@
            DISPLAY "========================================"
            DISPLAY "Invoice ID    : " INVOICE-ID
            DISPLAY "Booking ID    : " BOOKING-ID
-           DISPLAY "Invoice Date  : " WS-CURRENT-DATE
+           DISPLAY "Invoice Date  : " CREATED-AT-IV
            DISPLAY " "
            DISPLAY "Customer Details:"
            DISPLAY "Name          : " CUSTOMER-NAME
@@ -303,18 +303,18 @@
            DISPLAY " "
            DISPLAY "Charges:"
            MOVE PRICE-PER-NIGHT TO WS-PRICE-DISPLAY
-           DISPLAY "Rate/Night    : $" WS-PRICE-DISPLAY
+           DISPLAY "Rate/Night     :" FUNCTION TRIM(WS-PRICE-DISPLAY)
            MOVE WS-SUBTOTAL TO WS-PRICE-DISPLAY
-           DISPLAY "Subtotal      : $" WS-PRICE-DISPLAY
+           DISPLAY "Subtotal       :" FUNCTION TRIM(WS-PRICE-DISPLAY)
            MOVE WS-SERVICE-CHARGES TO WS-PRICE-DISPLAY
-           DISPLAY "Service Charges: $" WS-PRICE-DISPLAY
+           DISPLAY "Service Charges:" FUNCTION TRIM(WS-PRICE-DISPLAY)
            MOVE WS-TAX TO WS-PRICE-DISPLAY
-           DISPLAY "Tax (15%)     : $" WS-PRICE-DISPLAY
+           DISPLAY "Tax (15%)      :" FUNCTION TRIM(WS-PRICE-DISPLAY)
            DISPLAY "========================================"
            MOVE WS-TOTAL TO WS-PRICE-DISPLAY
-           DISPLAY "Total Amount  : $" WS-PRICE-DISPLAY
+           DISPLAY "Total Amount   :" FUNCTION TRIM(WS-PRICE-DISPLAY)
            DISPLAY "========================================"
-           DISPLAY "Status        : GENERATED"
+           DISPLAY "Status         : GENERATED"
            DISPLAY " ".
 
         UPDATE-ROOM-STATUS.

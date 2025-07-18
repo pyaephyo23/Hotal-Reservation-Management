@@ -41,12 +41,14 @@
        01  WS-CUSTOMER-FILE-STATUS    PIC 99.
        01  WS-SEARCH-INVOICE          PIC 9(5).
        01  WS-SEARCH-BOOKING          PIC 9(5).
-       01  WS-PRICE-DISPLAY           PIC $$,$$$,$$9.99.
+       01  WS-PRICE-DISPLAY           PIC $$,$$$,$$9.
 
        01  WS-HEADER-1.
            05 FILLER               PIC X(7) VALUE 'INVOICE'.
            05 FILLER               PIC X(3) VALUE SPACES.
            05 FILLER               PIC X(7) VALUE 'BOOKING'.
+           05 FILLER               PIC X(3) VALUE SPACES.
+           05 FILLER               PIC X(8) VALUE 'CREATED '.
            05 FILLER               PIC X(3) VALUE SPACES.
            05 FILLER               PIC X(11) VALUE 'ROOM CHARGE'.
            05 FILLER               PIC X(3) VALUE SPACES.
@@ -61,6 +63,8 @@
            05 FILLER               PIC X(3) VALUE SPACES.
            05 FILLER               PIC X(7) VALUE '-------'.
            05 FILLER               PIC X(3) VALUE SPACES.
+           05 FILLER               PIC X(8) VALUE '--------'.
+           05 FILLER               PIC X(3) VALUE SPACES.
            05 FILLER               PIC X(11) VALUE '-----------'.
            05 FILLER               PIC X(3) VALUE SPACES.
            05 FILLER               PIC X(7) VALUE '-------'.
@@ -74,6 +78,8 @@
            05 FILLER               PIC X(4) VALUE SPACES.
            05 WS-DL-BOOKING-ID     PIC Z(5)9.
            05 FILLER               PIC X(4) VALUE SPACES.
+           05 WS-DL-CREATED-AT     PIC 9(8).
+           05 FILLER               PIC X(3) VALUE SPACES.
            05 WS-DL-ROOM-CHARGE    PIC $(9).
            05 FILLER               PIC X(2) VALUE SPACES.
            05 WS-DL-SERVICE        PIC $(9).
@@ -286,6 +292,7 @@
        DISPLAY-INVOICE-RECORD.
            MOVE INVOICE-ID TO WS-DL-INVOICE-ID
            MOVE BOOKING-ID-IV TO WS-DL-BOOKING-ID
+           MOVE CREATED-AT-IV TO WS-DL-CREATED-AT
            MOVE ROOM-CHARGE TO WS-DL-ROOM-CHARGE
            MOVE SERVICE-CHARGE TO WS-DL-SERVICE
            IF TAX-RATE NUMERIC

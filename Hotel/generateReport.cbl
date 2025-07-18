@@ -10,23 +10,23 @@
                RECORD KEY IS BOOKING-ID
                FILE STATUS IS WS-BOOKING-FILE-STATUS.
 
-           SELECT ROOM-FILE ASSIGN TO '../DATA/ROOMS.DAT'
+           SELECT INVOICES-FILE ASSIGN TO '../DATA/INVOICES.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
-               RECORD KEY IS ROOM-ID
-               FILE STATUS IS WS-ROOM-FILE-STATUS.
+               RECORD KEY IS INVOICE-ID
+               FILE STATUS IS WS-INVOICE-FILE-STATUS.
 
        DATA DIVISION.
        FILE SECTION.
        FD  BOOKING-FILE.
-       COPY "../CopyBooks/BOOKINGS.cpy".
+       COPY "./CopyBooks/BOOKINGS.cpy".
 
-       FD  ROOM-FILE.
-       COPY "../CopyBooks/ROOMS.cpy".
+       FD  INVOICES-FILE.
+       COPY "./CopyBooks/INVOICES.cpy".
 
        WORKING-STORAGE SECTION.
        01  WS-BOOKING-FILE-STATUS  PIC 99.
-       01  WS-ROOM-FILE-STATUS     PIC 99.
+       01  WS-INVOICE-FILE-STATUS  PIC 99.
        01  WS-EOF                  PIC X VALUE 'N'.
        01  MENU-CHOICE             PIC 9.
        01  WS-CONTINUE             PIC X VALUE 'Y'.
@@ -62,16 +62,13 @@
        01  WS-MONTHLY-REVENUE      PIC 9(9)V99 VALUE 0.
        01  WS-DAILY-ROOMS-OCCUPIED PIC 9(3) VALUE 0.
        01  WS-MONTHLY-ROOMS-OCCUPIED PIC 9(3) VALUE 0.
-       01  WS-ROOM-NIGHTS          PIC 9(3) VALUE 0.
-       01  WS-PRICE-PER-NIGHT-DEC  PIC 9(9)V99.
-
-       01  WS-TEMP-PRICE           PIC 9(9).
-       01  WS-TEMP-DAYS            PIC 9(3).
-       01  WS-TEMP-REVENUE         PIC 9(9)V99.
+       01  WS-TOTAL-CHARGE-DEC     PIC 9(9)V99.
 
        01  WS-DISPLAY-REVENUE      PIC Z,ZZZ,ZZ9.99.
        01  WS-DISPLAY-ROOMS        PIC ZZ9.
-       01  WS-DISPLAY-NIGHTS       PIC ZZ9.
+       01  WS-TARGET-BOOKING-ID    PIC 9(5).
+       01  WS-INVOICE-FOUND        PIC X VALUE 'N'.
+       01  WS-INVOICE-EOF          PIC X VALUE 'N'.
 
        PROCEDURE DIVISION.
        MAIN-PROCEDURE.
@@ -191,8 +188,7 @@
            MOVE 0 TO WS-DAILY-REVENUE
            MOVE 0 TO WS-MONTHLY-REVENUE
            MOVE 0 TO WS-DAILY-ROOMS-OCCUPIED
-           MOVE 0 TO WS-MONTHLY-ROOMS-OCCUPIED
-           MOVE 0 TO WS-ROOM-NIGHTS.
+           MOVE 0 TO WS-MONTHLY-ROOMS-OCCUPIED.
 
        PROCESS-DAILY-BOOKINGS.
            OPEN INPUT BOOKING-FILE
@@ -202,9 +198,10 @@
                STOP RUN
            END-IF
 
-           OPEN INPUT ROOM-FILE
-           IF WS-ROOM-FILE-STATUS NOT = 00
-               DISPLAY "Error opening ROOM file: " WS-ROOM-FILE-STATUS
+           OPEN INPUT INVOICES-FILE
+           IF WS-INVOICE-FILE-STATUS NOT = 00
+               DISPLAY "Error opening INVOICES file: "
+                       WS-INVOICE-FILE-STATUS
                STOP RUN
            END-IF
 
@@ -220,28 +217,31 @@
            END-PERFORM
 
            CLOSE BOOKING-FILE
-           CLOSE ROOM-FILE.
+           CLOSE INVOICES-FILE.
 
        CHECK-DAILY-BOOKING.
            *> Only process completed bookings
            IF BOOKING-STATUS = "Completed"
                MOVE FUNCTION NUMVAL(CHECKIN-DATE) TO WS-CHECKIN-DATE-NUM
-             MOVE FUNCTION NUMVAL(CHECKOUT-DATE) TO WS-CHECKOUT-DATE-NUM
+               MOVE FUNCTION NUMVAL(CHECKOUT-DATE)
+               TO WS-CHECKOUT-DATE-NUM
 
                IF WS-CHECKIN-DATE-NUM <= WS-YESTERDAY-DATE-NUM AND
                   WS-CHECKOUT-DATE-NUM >= WS-YESTERDAY-DATE-NUM
-                   PERFORM CALCULATE-DAILY-REVENUE
+                   PERFORM GET-INVOICE-REVENUE
                    ADD 1 TO WS-DAILY-ROOMS-OCCUPIED
                END-IF
            END-IF.
 
-       CALCULATE-DAILY-REVENUE.
-           MOVE ROOM-ID-BK TO ROOM-ID
-           READ ROOM-FILE
-           IF WS-ROOM-FILE-STATUS = 00
-               MOVE PRICE-PER-NIGHT TO WS-TEMP-PRICE
-               COMPUTE WS-PRICE-PER-NIGHT-DEC = WS-TEMP-PRICE / 100
-               ADD WS-PRICE-PER-NIGHT-DEC TO WS-DAILY-REVENUE
+       GET-INVOICE-REVENUE.
+           *> Find corresponding invoice for this booking
+           MOVE BOOKING-ID TO WS-TARGET-BOOKING-ID
+           *> Save current position in invoices file
+           PERFORM FIND-INVOICE-FOR-BOOKING
+           IF WS-INVOICE-FOUND = 'Y'
+               *> Convert total charge to decimal format
+               COMPUTE WS-TOTAL-CHARGE-DEC = TOTAL-CHARGE / 100
+               ADD WS-TOTAL-CHARGE-DEC TO WS-DAILY-REVENUE
            END-IF.
 
        PROCESS-MONTHLY-BOOKINGS.
@@ -252,9 +252,10 @@
                STOP RUN
            END-IF
 
-           OPEN INPUT ROOM-FILE
-           IF WS-ROOM-FILE-STATUS NOT = 00
-               DISPLAY "Error opening ROOM file: " WS-ROOM-FILE-STATUS
+           OPEN INPUT INVOICES-FILE
+           IF WS-INVOICE-FILE-STATUS NOT = 00
+               DISPLAY "Error opening INVOICES file: "
+                       WS-INVOICE-FILE-STATUS
                STOP RUN
            END-IF
 
@@ -270,13 +271,14 @@
            END-PERFORM
 
            CLOSE BOOKING-FILE
-           CLOSE ROOM-FILE.
+           CLOSE INVOICES-FILE.
 
        CHECK-MONTHLY-BOOKING.
            *> Only process completed bookings
            IF BOOKING-STATUS = "Completed"
                MOVE FUNCTION NUMVAL(CHECKIN-DATE) TO WS-CHECKIN-DATE-NUM
-            MOVE FUNCTION NUMVAL(CHECKOUT-DATE) TO WS-CHECKOUT-DATE-NUM
+               MOVE FUNCTION NUMVAL(CHECKOUT-DATE)
+               TO WS-CHECKOUT-DATE-NUM
 
                IF ((WS-CHECKIN-DATE-NUM >= WS-THIS-MONTH-START-NUM AND
                    WS-CHECKIN-DATE-NUM <= WS-THIS-MONTH-END-NUM) OR
@@ -284,39 +286,19 @@
                    WS-CHECKOUT-DATE-NUM <= WS-THIS-MONTH-END-NUM) OR
                   (WS-CHECKIN-DATE-NUM <= WS-THIS-MONTH-START-NUM AND
                    WS-CHECKOUT-DATE-NUM >= WS-THIS-MONTH-END-NUM))
-                   PERFORM CALCULATE-MONTHLY-REVENUE
+                   PERFORM GET-MONTHLY-INVOICE-REVENUE
                    ADD 1 TO WS-MONTHLY-ROOMS-OCCUPIED
                END-IF
            END-IF.
 
-       CALCULATE-MONTHLY-REVENUE.
-           MOVE ROOM-ID-BK TO ROOM-ID
-           READ ROOM-FILE
-           IF WS-ROOM-FILE-STATUS = 00
-               MOVE PRICE-PER-NIGHT TO WS-TEMP-PRICE
-               COMPUTE WS-PRICE-PER-NIGHT-DEC = WS-TEMP-PRICE / 100
-
-               PERFORM CALCULATE-OVERLAP-DAYS
-               COMPUTE WS-TEMP-REVENUE =
-                   WS-PRICE-PER-NIGHT-DEC * WS-TEMP-DAYS
-               ADD WS-TEMP-REVENUE TO WS-MONTHLY-REVENUE
-           END-IF.
-
-       CALCULATE-OVERLAP-DAYS.
-           MOVE WS-CHECKIN-DATE-NUM TO WS-TARGET-DATE-NUM
-           IF WS-TARGET-DATE-NUM < WS-THIS-MONTH-START-NUM
-               MOVE WS-THIS-MONTH-START-NUM TO WS-TARGET-DATE-NUM
-           END-IF
-
-           MOVE WS-CHECKOUT-DATE-NUM TO WS-TEMP-DAYS
-           IF WS-TEMP-DAYS > WS-THIS-MONTH-END-NUM
-               MOVE WS-THIS-MONTH-END-NUM TO WS-TEMP-DAYS
-           END-IF
-
-           COMPUTE WS-TEMP-DAYS = WS-TEMP-DAYS - WS-TARGET-DATE-NUM + 1
-
-           IF WS-TEMP-DAYS < 1
-               MOVE 1 TO WS-TEMP-DAYS
+       GET-MONTHLY-INVOICE-REVENUE.
+           *> Find corresponding invoice for this booking
+           MOVE BOOKING-ID TO WS-TARGET-BOOKING-ID
+           PERFORM FIND-INVOICE-FOR-BOOKING
+           IF WS-INVOICE-FOUND = 'Y'
+               *> Convert total charge to decimal format
+               COMPUTE WS-TOTAL-CHARGE-DEC = TOTAL-CHARGE / 100
+               ADD WS-TOTAL-CHARGE-DEC TO WS-MONTHLY-REVENUE
            END-IF.
 
        DISPLAY-DAILY-REPORT.
@@ -348,5 +330,28 @@
            DISPLAY "Total Bookings: " WS-DISPLAY-ROOMS
            DISPLAY "======================================="
            DISPLAY " ".
+
+       FIND-INVOICE-FOR-BOOKING.
+           MOVE 'N' TO WS-INVOICE-FOUND
+           MOVE 'N' TO WS-INVOICE-EOF
+
+           *> Close and reopen invoices file for fresh search
+           CLOSE INVOICES-FILE
+           OPEN INPUT INVOICES-FILE
+
+           IF WS-INVOICE-FILE-STATUS = 00
+               PERFORM UNTIL WS-INVOICE-EOF = 'Y'
+               OR WS-INVOICE-FOUND = 'Y'
+
+                   READ INVOICES-FILE NEXT RECORD
+                   AT END
+                       MOVE 'Y' TO WS-INVOICE-EOF
+                   NOT AT END
+                       IF BOOKING-ID-IV = WS-TARGET-BOOKING-ID
+                           MOVE 'Y' TO WS-INVOICE-FOUND
+                       END-IF
+                   END-READ
+               END-PERFORM
+           END-IF.
 
        END PROGRAM generateReport.
