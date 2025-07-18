@@ -18,27 +18,14 @@
        COPY "./CopyBooks/ROOMS.cpy".
 
        FD  BOOKING-FILE.
-       01  BOOKING-RECORD.
-           05 BOOKING-ID      PIC 9(5).
-           05 ROOM-ID-BK      PIC X(5).
-           05 CUSTOMER-ID-BK  PIC 9(5).
-           05 CHECKIN-DATE    PIC X(8).
-           05 CHECKOUT-DATE   PIC X(8).
-           05 BOOKING-STATUS  PIC X(10).
-           05 CHEKIN-FLAG     PIC X VALUE 'N'.
-           05 CHECKOUT-FLAG   PIC X VALUE 'N'.
-           05 CREATED-AT      PIC X(14).
+       COPY "./CopyBooks/BOOKINGS.cpy".
 
        WORKING-STORAGE SECTION.
        01 WS-CHOICE            PIC 9.
        01 WS-BOOKING-ID        PIC 9(5).
        01 WS-FOUND             PIC X VALUE 'N'.
        01 WS-CHECKIN-DATE      PIC X(8).
-       01 WS-CURRENT-DATE-FIELDS.
-           05 WS-CURRENT-YEAR    PIC 9(4).
-           05 WS-CURRENT-MONTH   PIC 9(2).
-           05 WS-CURRENT-DAY     PIC 9(2).
-       01 WS-DATE-FORMATTED    PIC X(8).
+       01 WS-CURRENT-DATE      PIC 9(8).
        01 WS-TIME-FORMATTED    PIC X(6).
        01 WS-CURRENT-TIME-FIELDS.
            05 WS-CURRENT-HOUR    PIC 9(2).
@@ -74,11 +61,7 @@
            OPEN I-O BOOKING-FILE.
 
            *> Get the current system date
-           ACCEPT WS-CURRENT-DATE-FIELDS FROM DATE YYYYMMDD.
-           STRING WS-CURRENT-YEAR DELIMITED BY SIZE
-                  WS-CURRENT-MONTH DELIMITED BY SIZE
-                  WS-CURRENT-DAY DELIMITED BY SIZE
-                  INTO WS-DATE-FORMATTED.
+           ACCEPT WS-CURRENT-DATE FROM DATE YYYYMMDD.
 
             *> Get the current system time
            ACCEPT WS-CURRENT-TIME-FIELDS FROM TIME.
@@ -96,7 +79,8 @@
                NOT INVALID KEY
                    IF BOOKING-STATUS OF BOOKING-RECORD = 'Active'
                        IF CHEKIN-FLAG OF BOOKING-RECORD = 'N'
-                   IF WS-DATE-FORMATTED < CHECKIN-DATE OF BOOKING-RECORD
+                   IF FUNCTION INTEGER-OF-DATE(WS-CURRENT-DATE) <
+                       FUNCTION INTEGER-OF-DATE(CHECKIN-DATE)
                    DISPLAY "You cannot check in before CHECKIN-DATE: "
                    CHECKIN-DATE OF BOOKING-RECORD
                    CLOSE BOOKING-FILE
@@ -110,7 +94,7 @@
                DISPLAY "Check In Complete."
                DISPLAY "BOOKING-ID: " BOOKING-ID
                DISPLAY "ROOM-ID-BK: " ROOM-ID-BK
-               DISPLAY "CHECKIN-DATE: " CHECKIN-DATE OF BOOKING-RECORD
+               DISPLAY "CHECKIN-DATE: " CHECKIN-DATE
                DISPLAY "CHECKIN-TIME: " WS-TIME-FORMATTED
                            END-REWRITE
                        ELSE

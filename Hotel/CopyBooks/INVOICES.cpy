@@ -5,4 +5,4 @@
            05 SERVICE-CHARGE     PIC 9(9).
            05 TAX-RATE           PIC 9(2).
            05 TOTAL-CHARGE       PIC 9(9).
-           05 CREATED-AT-IV        PIC 9(8).
+           05 CREATED-AT-IV      PIC 9(8).
