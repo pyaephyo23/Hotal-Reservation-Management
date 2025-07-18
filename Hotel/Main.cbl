@@ -18,11 +18,11 @@
            DISPLAY "Hotel Reservation Management System"
            DISPLAY "1. Book a Room"
            DISPLAY "2. Cancel Booking"
-           DISPLAY "3. Browse Bookings."
+           DISPLAY "3. Browse Bookings"
            DISPLAY "4. Check-In"
            DISPLAY "5. Check-Out"
            DISPLAY "6. View Hotel Rooms"
-           DISPLAY "7. Generate Revenue Report"
+           DISPLAY "7. Generate Summary Report"
            DISPLAY "8. View Customers"
            DISPLAY "9. Exit"
            DISPLAY
@@ -59,5 +59,5 @@
        VIEW-CUSTOMERS.
            CALL 'viewCustomers'.
        GENERATE-REPORT.
-           CALL 'generateReport'.
+           CALL 'summaryReport'.
        END PROGRAM Main.
