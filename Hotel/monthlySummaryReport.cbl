@@ -47,8 +47,10 @@
            05 WS-REPORT-YEAR       PIC 9(4).
            05 WS-REPORT-MONTH      PIC 99.
            05 WS-REPORT-DAY        PIC 99.
-       01  WS-CHECKIN-DATE         PIC 9(8).
-       01  WS-CHECKOUT-DATE        PIC 9(8).
+
+       01  WS-REPORT-DATE-NUM      PIC 9(8).
+       01  WS-CHECKIN-DATE-NUM     PIC 9(8).
+       01  WS-CHECKOUT-DATE-NUM    PIC 9(8).
        01  WS-BOOKING-MONTH        PIC 99.
        01  WS-BOOKING-YEAR         PIC 9(4).
 
@@ -69,7 +71,7 @@
        01  WS-DISPLAY-OCCUPIED     PIC ZZ9.
        01  WS-DISPLAY-TOTAL        PIC ZZ9.
        01  WS-DISPLAY-OCCUPANCY    PIC ZZ9.99.
-       01  WS-DISPLAY-REVENUE      PIC Z(8)9.
+       01  WS-DISPLAY-REVENUE      PIC Z(8)9.99.
 
        *> Temporary fields
        01  WS-TOTAL-CHARGE-DEC     PIC 9(9)V99.
@@ -87,7 +89,11 @@
            GOBACK.
 
        GET-REPORT-DATE.
-           ACCEPT WS-REPORT-DATE FROM DATE YYYYMMDD.
+           ACCEPT WS-REPORT-DATE FROM DATE YYYYMMDD
+           COMPUTE WS-REPORT-DATE-NUM =
+               WS-REPORT-YEAR * 10000 +
+               WS-REPORT-MONTH * 100 +
+               WS-REPORT-DAY.
 
        COUNT-CHECKIN-OUT.
            OPEN INPUT BOOKING-FILE
@@ -114,13 +120,13 @@
 
        CHECK-MONTHLY-BOOKING-DATES.
            *> Convert dates to numeric for comparison
-           MOVE CHECKIN-DATE TO WS-CHECKIN-DATE
-           MOVE CHECKOUT-DATE TO WS-CHECKOUT-DATE
+           MOVE FUNCTION NUMVAL(CHECKIN-DATE) TO WS-CHECKIN-DATE-NUM
+           MOVE FUNCTION NUMVAL(CHECKOUT-DATE) TO WS-CHECKOUT-DATE-NUM
 
            *> Extract year and month from check-in date
-           DIVIDE WS-CHECKIN-DATE BY 10000 GIVING WS-BOOKING-YEAR
+           DIVIDE WS-CHECKIN-DATE-NUM BY 10000 GIVING WS-BOOKING-YEAR
            COMPUTE WS-BOOKING-MONTH =
-               (WS-CHECKIN-DATE - (WS-BOOKING-YEAR * 10000)) / 100
+               (WS-CHECKIN-DATE-NUM - (WS-BOOKING-YEAR * 10000)) / 100
 
            *> Count check-ins in this month
            IF WS-BOOKING-YEAR = WS-REPORT-YEAR AND
@@ -130,9 +136,9 @@
            END-IF
 
            *> Extract year and month from check-out date
-           DIVIDE WS-CHECKOUT-DATE BY 10000 GIVING WS-BOOKING-YEAR
+           DIVIDE WS-CHECKOUT-DATE-NUM BY 10000 GIVING WS-BOOKING-YEAR
            COMPUTE WS-BOOKING-MONTH =
-               (WS-CHECKOUT-DATE - (WS-BOOKING-YEAR * 10000)) / 100
+               (WS-CHECKOUT-DATE-NUM - (WS-BOOKING-YEAR * 10000)) / 100
 
            *> Count check-outs in this month
            IF WS-BOOKING-YEAR = WS-REPORT-YEAR AND
