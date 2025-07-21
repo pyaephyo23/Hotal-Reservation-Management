@@ -164,19 +164,14 @@
                PERFORM CREATE-BOOKING
 
                DISPLAY "========== Booking Completed =========="
-               DISPLAY "Booking ID    : " WS-BOOKING-ID
-               DISPLAY "Room ID       : " WS-ROOM-ID
-               DISPLAY "Room Type     : " WS-ROOM-TYPE
-               DISPLAY "Customer ID   : " WS-CUSTOMER-ID
-               DISPLAY "Customer Name : " WS-CUSTOMER-NAME
-               DISPLAY "Check-in Date : " WS-CHECKIN-DATE(1:4) "/"
-                       WS-CHECKIN-DATE(5:2) "/" WS-CHECKIN-DATE(7:2)
-               DISPLAY "Check-out Date: " WS-CHECKOUT-DATE(1:4) "/"
-                       WS-CHECKOUT-DATE(5:2) "/" WS-CHECKOUT-DATE(7:2)
-               DISPLAY "Created At    : "
-               WS-CREATED-AT-TIMESTAMP(1:4) "/"
-                       WS-CREATED-AT-TIMESTAMP(5:2) "/"
-                       WS-CREATED-AT-TIMESTAMP(7:2)
+               DISPLAY "Booking ID: " WS-BOOKING-ID
+               DISPLAY "Room ID:    " WS-ROOM-ID
+               DISPLAY "Room Type:  " WS-ROOM-TYPE
+               DISPLAY "Customer ID:" WS-CUSTOMER-ID
+               DISPLAY "Customer Name: " WS-CUSTOMER-NAME
+               DISPLAY "Check-in Date: " WS-CHECKIN-DATE
+               DISPLAY "Check-out Date: " WS-CHECKOUT-DATE
+               DISPLAY "Created At: " WS-CREATED-AT-TIMESTAMP
                DISPLAY "========================================"
            ELSE
                *> Only show "no rooms available" if user didn't cancel
@@ -205,14 +200,12 @@
            END-EVALUATE.
 
        VALIDATE-ROOM-TYPE.
-           DISPLAY "========================================"
            DISPLAY "Select Room Type:"
            DISPLAY "1. Single"
            DISPLAY "2. Double"
            DISPLAY "3. Delux"
            DISPLAY "0. Cancel booking"
            DISPLAY "Enter choice (1-3) or 0 to cancel: "
-           DISPLAY "========================================"
            ACCEPT WS-CHOICE
 
            EVALUATE WS-CHOICE
@@ -238,14 +231,10 @@
            MOVE 'N' TO WS-FOUND
            MOVE ZEROS TO WS-AVAILABLE-COUNT
 
-        DISPLAY "Checking availability for "
-                       FUNCTION TRIM(WS-ROOM-TYPE)
-                       " rooms from "
-                       WS-CHECKIN-DATE(1:4) "/" WS-CHECKIN-DATE(5:2)
-                       "/" WS-CHECKIN-DATE(7:2)
-                       " to "
-                       WS-CHECKOUT-DATE(1:4) "/" WS-CHECKOUT-DATE(5:2)
-                       "/" WS-CHECKOUT-DATE(7:2) "..."
+           DISPLAY "Checking availability for "
+                   FUNCTION TRIM(WS-ROOM-TYPE)
+                   " rooms from " WS-CHECKIN-DATE
+                   " to " WS-CHECKOUT-DATE "..."
 
            *> Open rooms file to get all rooms of the requested type
            OPEN INPUT ROOMS-FILE
