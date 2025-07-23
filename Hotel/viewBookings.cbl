@@ -21,6 +21,11 @@
        01  MENU-CHOICE             PIC 9.
        01  WS-FILE-STATUS          PIC 99.
 
+       *> Color codes for display
+       01 RED-COLOR          PIC X(8) VALUE X"1B5B33316D".
+       01 GREEN-COLOR        PIC X(8) VALUE X"1B5B33326D".
+       01 RESET-COLOR        PIC X(4) VALUE X"1B5B306D".
+
        01  WS-HEADER-1.
            05 FILLER               PIC X(7) VALUE 'BOOKING'.
            05 FILLER               PIC X(3) VALUE SPACES.
@@ -32,6 +37,10 @@
            05 FILLER               PIC X(3) VALUE SPACES.
            05 FILLER               PIC X(10) VALUE 'CHECK-OUT'.
            05 FILLER               PIC X(3) VALUE SPACES.
+           05 FILLER               PIC X(8) VALUE 'IN-FLAG'.
+           05 FILLER               PIC X(2) VALUE SPACES.
+           05 FILLER               PIC X(9) VALUE 'OUT-FLAG'.
+           05 FILLER               PIC X(2) VALUE SPACES.
            05 FILLER               PIC X(10) VALUE 'STATUS'.
 
        01  WS-HEADER-2.
@@ -45,6 +54,10 @@
            05 FILLER               PIC X(3) VALUE SPACES.
            05 FILLER               PIC X(10) VALUE '----------'.
            05 FILLER               PIC X(3) VALUE SPACES.
+           05 FILLER               PIC X(8) VALUE '--------'.
+           05 FILLER               PIC X(2) VALUE SPACES.
+           05 FILLER               PIC X(9) VALUE '---------'.
+           05 FILLER               PIC X(2) VALUE SPACES.
            05 FILLER               PIC X(10) VALUE '----------'.
 
        01  WS-DETAIL-LINE.
@@ -58,6 +71,10 @@
            05 FILLER               PIC X(3) VALUE SPACES.
            05 WS-DL-CHECKOUT       PIC X(10).
            05 FILLER               PIC X(3) VALUE SPACES.
+           05 WS-DL-CHECKIN-FLAG   PIC X(1).
+           05 FILLER               PIC X(9) VALUE SPACES.
+           05 WS-DL-CHECKOUT-FLAG  PIC X(1).
+           05 FILLER               PIC X(10) VALUE SPACES.
            05 WS-DL-STATUS         PIC X(10).
 
        LINKAGE SECTION.
@@ -68,7 +85,7 @@
        MAIN-LOOP.
            PERFORM UNTIL MENU-CHOICE = 9
            DISPLAY
-           "***********************************************************"
+           "**************************************************"
            DISPLAY "View Hotel Bookings"
            DISPLAY "1. View All Bookings"
            DISPLAY "2. View All Active Bookings"
@@ -76,7 +93,7 @@
            DISPLAY "4. View All Completed Bookings"
            DISPLAY "9. Go Back"
            DISPLAY
-           "***********************************************************"
+           "**************************************************"
            ACCEPT MENU-CHOICE
            EVALUATE MENU-CHOICE
                WHEN 1 PERFORM ALL-BOOKINGS-DSP
@@ -84,7 +101,8 @@
                WHEN 3 PERFORM CANCELLED-BOOKINGS-DSP
                WHEN 4 PERFORM COMPLETED-BOOKINGS-DSP
                WHEN 9 GOBACK
-               WHEN OTHER DISPLAY "Invalid choice"
+               WHEN OTHER
+                   DISPLAY RED-COLOR "Invalid selection." RESET-COLOR
            END-EVALUATE
            END-PERFORM.
            GOBACK.
@@ -201,6 +219,8 @@
            *> Format check-out date as YYYY/MM/DD
            STRING CHECKOUT-DATE(1:4) "/" CHECKOUT-DATE(5:2) "/"
                   CHECKOUT-DATE(7:2) INTO WS-DL-CHECKOUT
+           MOVE CHEKIN-FLAG TO WS-DL-CHECKIN-FLAG
+           MOVE CHECKOUT-FLAG TO WS-DL-CHECKOUT-FLAG
            MOVE BOOKING-STATUS TO WS-DL-STATUS
            DISPLAY WS-DETAIL-LINE.
 

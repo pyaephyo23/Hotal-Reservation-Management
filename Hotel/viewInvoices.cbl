@@ -26,6 +26,11 @@
        01  WS-PRICE-DISPLAY           PIC $$,$$$,$$9.
        01  WS-FORMATTED-DATE          PIC X(10).
 
+       *> Color codes for display
+       01 RED-COLOR          PIC X(8) VALUE X"1B5B33316D".
+       01 GREEN-COLOR        PIC X(8) VALUE X"1B5B33326D".
+       01 RESET-COLOR        PIC X(4) VALUE X"1B5B306D".
+
        01  WS-HEADER-1.
            05 FILLER               PIC X(7) VALUE 'INVOICE'.
            05 FILLER               PIC X(3) VALUE SPACES.
@@ -81,23 +86,24 @@
            PERFORM UNTIL MENU-CHOICE = 9
            DISPLAY " "
            DISPLAY
-           "***********************************************************"
+           "**************************************************"
            DISPLAY "                View Hotel Invoices"
            DISPLAY
-           "***********************************************************"
+           "**************************************************"
            DISPLAY "1. View All Invoices"
            DISPLAY "2. Search Invoice by Invoice ID"
            DISPLAY "3. Search Invoice by Booking ID"
            DISPLAY "9. Go Back"
            DISPLAY
-           "***********************************************************"
+           "**************************************************"
            ACCEPT MENU-CHOICE
            EVALUATE MENU-CHOICE
                WHEN 1 PERFORM ALL-INVOICES-DSP
                WHEN 2 PERFORM SEARCH-BY-INVOICE-ID
                WHEN 3 PERFORM SEARCH-BY-BOOKING-ID
                WHEN 9 GOBACK
-               WHEN OTHER DISPLAY "Invalid choice! Please try again."
+               WHEN OTHER
+                   DISPLAY RED-COLOR "Invalid selection." RESET-COLOR
            END-EVALUATE
            END-PERFORM.
            GOBACK.
@@ -124,7 +130,7 @@
        SEARCH-BY-INVOICE-ID.
            DISPLAY " "
            DISPLAY "SEARCH BY INVOICE ID"
-           DISPLAY "===================="
+           DISPLAY "=================================================="
            DISPLAY "Enter Invoice ID: "
            ACCEPT WS-SEARCH-INVOICE
 
@@ -151,7 +157,7 @@
        SEARCH-BY-BOOKING-ID.
            DISPLAY " "
            DISPLAY "SEARCH BY BOOKING ID"
-           DISPLAY "===================="
+           DISPLAY "=================================================="
            DISPLAY "Enter Booking ID: "
            ACCEPT WS-SEARCH-BOOKING
 
@@ -163,7 +169,7 @@
                DISPLAY " "
                DISPLAY "INVOICES FOR BOOKING ID: "
                WS-SEARCH-BOOKING
-               DISPLAY "========================="
+            DISPLAY "=================================================="
                PERFORM DISPLAY-HEADERS
               MOVE 0 TO INVOICE-ID
               *>START INVOICE-FILE KEY IS NOT LESS THAN INVOICE-ID

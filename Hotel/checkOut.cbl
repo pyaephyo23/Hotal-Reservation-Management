@@ -36,7 +36,9 @@
         COPY "./CopyBooks/INVOICES.cpy".
 
         WORKING-STORAGE SECTION.
+           01 WS-CHOICE               PIC 9.
            01 WS-BOOKING-ID           PIC 9(5).
+           01 WS-ROOM-ID-INPUT        PIC X(5).
            01 WS-ROOM-FILE-STATUS     PIC 99.
            01 WS-BOOKING-FILE-STATUS  PIC 99.
            01 WS-CUSTOMER-FILE-STATUS PIC 99.
@@ -68,23 +70,50 @@
                05 FILLER PIC X(40) VALUE '      INVOICE               '.
                05 FILLER PIC X(40) VALUE '============================'.
 
+           *> Color codes for display
+           01 RED-COLOR          PIC X(8) VALUE X"1B5B33316D".
+           01 GREEN-COLOR        PIC X(8) VALUE X"1B5B33326D".
+           01 RESET-COLOR        PIC X(4) VALUE X"1B5B306D".
+
 
        LINKAGE SECTION.
           01 LINK PIC 9.
         PROCEDURE DIVISION USING LINK.
 
            MAIN-PROCESS.
-           DISPLAY "Hotel Check-Out System"
-           DISPLAY "===================="
-           DISPLAY "Enter Booking ID For Check-Out: "
+           DISPLAY "**************************************************"
+           DISPLAY "Guest Check-Out Service"
+           DISPLAY "1. Check-Out by Booking ID"
+           DISPLAY "2. Check-Out by Room ID"
+           DISPLAY "9. Return to Main Menu"
+           DISPLAY "**************************************************"
+           ACCEPT WS-CHOICE
+           EVALUATE WS-CHOICE
+               WHEN 1
+                   PERFORM CHECKOUT-PROCESS
+               WHEN 2
+                   PERFORM CHECKOUT-BY-ROOM-ID
+               WHEN 9
+                   GOBACK
+               WHEN OTHER
+                 DISPLAY RED-COLOR "Invalid selection." RESET-COLOR
+                   GO TO MAIN-PROCESS
+           END-EVALUATE
+           GO TO MAIN-PROCESS.
+
+       CHECKOUT-PROCESS.
+           DISPLAY "Please enter your Booking ID: "
            ACCEPT WS-BOOKING-ID
-           DISPLAY "Enter Additional Servies Charges:"
-           ACCEPT WS-SERVICE-CHARGES
 
            PERFORM OPEN-FILES
-           PERFORM GET-NEXT-INVOICE-ID
            PERFORM SEARCH-BOOKING
            IF WS-FOUND-FLAG = 'Y'
+               DISPLAY GREEN-COLOR
+                "Booking found! Processing your checkout..." RESET-COLOR
+               DISPLAY "Additional service charges (if any): "
+               ACCEPT WS-SERVICE-CHARGES
+
+               PERFORM GET-NEXT-INVOICE-ID
                PERFORM CHECK-AND-UPDATE-CHECKOUT-DATE
                PERFORM GET-CUSTOMER-INFO
                PERFORM GET-ROOM-INFO
@@ -92,14 +121,92 @@
                PERFORM GENERATE-INVOICE
                PERFORM UPDATE-ROOM-STATUS
                PERFORM UPDATE-BOOKING-STATUS
-               DISPLAY "Check-out completed successfully!"
-               DISPLAY "Room " ROOM-ID " is now available."
+               DISPLAY GREEN-COLOR "Check-out completed successfully!"
+               RESET-COLOR
+               DISPLAY GREEN-COLOR "Room " ROOM-ID
+               " is now available for new guests." RESET-COLOR
+               DISPLAY " "
            ELSE
-               DISPLAY "Booking not found or already checked out."
+             DISPLAY RED-COLOR
+             "Error: Booking ID not found or not eligible for checkout."
+             RESET-COLOR
+             DISPLAY " "
            END-IF
 
-           PERFORM CLOSE-FILES
-           GOBACK.
+           PERFORM CLOSE-FILES.
+
+       CHECKOUT-BY-ROOM-ID.
+           DISPLAY "Please enter Room ID: "
+           ACCEPT WS-ROOM-ID-INPUT
+           DISPLAY " "
+           PERFORM OPEN-FILES
+           PERFORM FIND-BOOKING-BY-ROOM-ID
+           IF WS-FOUND-FLAG = 'Y'
+               DISPLAY GREEN-COLOR
+                "Processing your checkout..."
+                RESET-COLOR
+                DISPLAY " "
+               DISPLAY "Additional service charges (if any): "
+               ACCEPT WS-SERVICE-CHARGES
+
+               PERFORM GET-NEXT-INVOICE-ID
+               PERFORM CHECK-AND-UPDATE-CHECKOUT-DATE
+               PERFORM GET-CUSTOMER-INFO
+               PERFORM GET-ROOM-INFO
+               PERFORM CALCULATE-CHARGES
+               PERFORM GENERATE-INVOICE
+               PERFORM UPDATE-ROOM-STATUS
+               PERFORM UPDATE-BOOKING-STATUS
+               DISPLAY GREEN-COLOR "Check-out completed successfully!"
+               RESET-COLOR
+             DISPLAY GREEN-COLOR
+             "Room " ROOM-ID " is now available for new guests."
+              RESET-COLOR
+           ELSE
+             DISPLAY RED-COLOR
+             "Error: No guest currently checked into this room."
+              RESET-COLOR
+           END-IF
+
+           PERFORM CLOSE-FILES.
+
+       FIND-BOOKING-BY-ROOM-ID.
+           MOVE 'N' TO WS-FOUND-FLAG
+           MOVE 'N' TO WS-EOF-INVOICE
+
+           OPEN INPUT BOOKING-FILE
+           PERFORM UNTIL WS-EOF-INVOICE = 'Y'
+               READ BOOKING-FILE NEXT
+                   AT END
+                       MOVE 'Y' TO WS-EOF-INVOICE
+                   NOT AT END
+                       IF ROOM-ID-BK = WS-ROOM-ID-INPUT
+                          AND BOOKING-STATUS = 'Active'
+                          AND CHEKIN-FLAG = 'Y'
+                          AND CHECKOUT-FLAG = 'N'
+                           MOVE 'Y' TO WS-FOUND-FLAG
+                           MOVE BOOKING-ID TO WS-BOOKING-ID
+                           MOVE 'Y' TO WS-EOF-INVOICE
+                           DISPLAY GREEN-COLOR "Guest found in Room "
+                                   WS-ROOM-ID-INPUT RESET-COLOR
+                           DISPLAY "Booking Reference: " BOOKING-ID
+                       END-IF
+               END-READ
+           END-PERFORM
+           CLOSE BOOKING-FILE
+
+           IF WS-FOUND-FLAG = 'Y'
+               *> Now re-read the specific booking record with the key
+               MOVE WS-BOOKING-ID TO BOOKING-ID
+               OPEN INPUT BOOKING-FILE
+               READ BOOKING-FILE
+                   INVALID KEY
+                       MOVE 'N' TO WS-FOUND-FLAG
+                       DISPLAY RED-COLOR "Error reading booking record."
+                        RESET-COLOR
+               END-READ
+               CLOSE BOOKING-FILE
+           END-IF.
 
         OPEN-FILES.
            OPEN I-O ROOMS-FILE BOOKING-FILE
@@ -109,7 +216,7 @@
               WS-BOOKING-FILE-STATUS NOT = 00 OR
               WS-CUSTOMER-FILE-STATUS NOT = 00 OR
               WS-INVOICE-FILE-STATUS NOT = 00
-               DISPLAY "Error opening files"
+               DISPLAY RED-COLOR "Error opening files" RESET-COLOR
                STOP RUN
            END-IF.
 
@@ -141,24 +248,26 @@
                    MOVE 'Y' TO WS-FOUND-FLAG
                ELSE
                    MOVE 'N' TO WS-FOUND-FLAG
-                   DISPLAY "Booking is not active or already completed."
                END-IF
            END-READ.
 
         GET-CUSTOMER-INFO.
-           DISPLAY "Fetching customer information..."
-           display "Customer ID: " CUSTOMER-ID-BK
+           DISPLAY "Retrieving guest information..."
+           DISPLAY "Guest ID: " CUSTOMER-ID-BK
            MOVE CUSTOMER-ID-BK TO CUSTOMER-ID
            READ CUSTOMER-FILE
                INVALID KEY
-                   DISPLAY "Customer information not found"
+               DISPLAY RED-COLOR
+                "Warning: Guest information not found in records"
+                 RESET-COLOR
            END-READ.
 
         GET-ROOM-INFO.
            MOVE ROOM-ID-BK TO ROOM-ID
            READ ROOMS-FILE
                INVALID KEY
-                   DISPLAY "Room information not found"
+                   DISPLAY RED-COLOR "Room information not found"
+                   RESET-COLOR
            END-READ.
 
         CALCULATE-CHARGES.
@@ -174,9 +283,9 @@
            END-IF
 
            COMPUTE WS-SUBTOTAL = PRICE-PER-NIGHT * WS-NIGHTS
-           COMPUTE WS-TAX = (WS-SUBTOTAL + WS-SERVICE-CHARGES) *
-                             WS-TAX-RATE
-           COMPUTE WS-TOTAL = WS-SUBTOTAL + WS-SERVICE-CHARGES + WS-TAX.
+           ADD WS-SERVICE-CHARGES TO WS-SUBTOTAL
+           COMPUTE WS-TAX = WS-SUBTOTAL * WS-TAX-RATE
+           COMPUTE WS-TOTAL = WS-SUBTOTAL + WS-TAX.
 
         GENERATE-INVOICE.
            OPEN INPUT INVOICES-FILE
@@ -209,51 +318,64 @@
            OPEN I-O INVOICES-FILE
            WRITE INVOICE-RECORD
                INVALID KEY
-                   DISPLAY "Error writing invoice to file"
+                   DISPLAY RED-COLOR "Error writing invoice to file"
+                    RESET-COLOR
                NOT INVALID KEY
-                   DISPLAY "Invoice record written to file"
+                   DISPLAY GREEN-COLOR
+                    "Invoice record created successfully" RESET-COLOR
            END-WRITE
-           DISPLAY "INVOICES-FILE write successful"
+           DISPLAY GREEN-COLOR "Invoice generation completed"
+           RESET-COLOR
            CLOSE INVOICES-FILE
 
-           DISPLAY "========================================"
+           DISPLAY "=================================================="
            DISPLAY "              INVOICE                  "
-           DISPLAY "========================================"
+           DISPLAY "=================================================="
            DISPLAY "Invoice ID    : " INVOICE-ID
            DISPLAY "Booking ID    : " BOOKING-ID
-           DISPLAY "Invoice Date  : " CREATED-AT-IV
+           DISPLAY "Invoice Date  : " CREATED-AT-IV(1:4) "/"
+                   CREATED-AT-IV(5:2) "/" CREATED-AT-IV(7:2)
            DISPLAY " "
            DISPLAY "Customer Details:"
            DISPLAY "Name          : " CUSTOMER-NAME
            DISPLAY "Phone         : " CUSTOMER-PHONE
-           DISPLAY "Email         : " CUSTOMER-EMAIL
-           DISPLAY "Address       : " NRC-NUMBER
            DISPLAY " "
            DISPLAY "Booking Details:"
            DISPLAY "Room ID       : " ROOM-ID
            DISPLAY "Room Type     : " ROOM-TYPE
-           DISPLAY "Check-in      : " CHECKIN-DATE
-           DISPLAY "Check-out     : " CHECKOUT-DATE
+           DISPLAY "Check-in      : " CHECKIN-DATE(1:4) "/"
+                   CHECKIN-DATE(5:2) "/" CHECKIN-DATE(7:2)
+           DISPLAY "Check-out     : " CHECKOUT-DATE(1:4) "/"
+                   CHECKOUT-DATE(5:2) "/" CHECKOUT-DATE(7:2)
            IF WS-EARLY-CHECKOUT-FLAG = 'Y'
-               DISPLAY "Original Checkout: " WS-ORIGINAL-CHECKOUT
+               DISPLAY "Original Checkout: " WS-ORIGINAL-CHECKOUT(1:4)
+               "/"
+                       WS-ORIGINAL-CHECKOUT(5:2) "/"
+                       WS-ORIGINAL-CHECKOUT(7:2)
                DISPLAY "** EARLY CHECKOUT **"
            END-IF
            DISPLAY "Nights        : " WS-NIGHTS
            DISPLAY " "
            DISPLAY "Charges:"
            MOVE PRICE-PER-NIGHT TO WS-PRICE-DISPLAY
-           DISPLAY "Rate/Night     :" FUNCTION TRIM(WS-PRICE-DISPLAY)
+           DISPLAY "Rate/Night        :" FUNCTION TRIM(WS-PRICE-DISPLAY)
+           COMPUTE WS-SUBTOTAL = (PRICE-PER-NIGHT * WS-NIGHTS)
            MOVE WS-SUBTOTAL TO WS-PRICE-DISPLAY
-           DISPLAY "Subtotal       :" FUNCTION TRIM(WS-PRICE-DISPLAY)
+           DISPLAY "Room Charges      :" FUNCTION TRIM(WS-PRICE-DISPLAY)
            MOVE WS-SERVICE-CHARGES TO WS-PRICE-DISPLAY
-           DISPLAY "Service Charges:" FUNCTION TRIM(WS-PRICE-DISPLAY)
+          DISPLAY "Additional Services:" FUNCTION TRIM(WS-PRICE-DISPLAY)
+           COMPUTE WS-SUBTOTAL = (PRICE-PER-NIGHT * WS-NIGHTS) +
+                                  WS-SERVICE-CHARGES
+           MOVE WS-SUBTOTAL TO WS-PRICE-DISPLAY
+           DISPLAY "Subtotal          :" FUNCTION TRIM(WS-PRICE-DISPLAY)
            MOVE WS-TAX TO WS-PRICE-DISPLAY
-           DISPLAY "Tax (15%)      :" FUNCTION TRIM(WS-PRICE-DISPLAY)
-           DISPLAY "========================================"
+           DISPLAY "Tax (15%)         :" FUNCTION TRIM(WS-PRICE-DISPLAY)
+           DISPLAY "=================================================="
            MOVE WS-TOTAL TO WS-PRICE-DISPLAY
-           DISPLAY "Total Amount   :" FUNCTION TRIM(WS-PRICE-DISPLAY)
-           DISPLAY "========================================"
-           DISPLAY "Status         : GENERATED"
+           DISPLAY "Total Amount      :" FUNCTION TRIM(WS-PRICE-DISPLAY)
+           DISPLAY "=================================================="
+           DISPLAY "Status            : COMPLETED"
+           DISPLAY " "
            DISPLAY " ".
 
         UPDATE-ROOM-STATUS.
@@ -274,16 +396,33 @@
 
            REWRITE ROOMS-RECORD
                INVALID KEY
-                   DISPLAY "Error updating room status"
+                   DISPLAY RED-COLOR "Error updating room status"
+                    RESET-COLOR
            END-REWRITE.
 
         UPDATE-BOOKING-STATUS.
-           MOVE 'Completed' TO BOOKING-STATUS
-           MOVE 'Y' TO CHECKOUT-FLAG
-           REWRITE BOOKING-RECORD
+           *> Read the booking record with the key first
+           MOVE WS-BOOKING-ID TO BOOKING-ID
+           OPEN I-O BOOKING-FILE
+           READ BOOKING-FILE
                INVALID KEY
-                   DISPLAY "Error updating booking status"
-           END-REWRITE.
+                   DISPLAY RED-COLOR "Error reading booking for update"
+                   RESET-COLOR
+               NOT INVALID KEY
+                   *> Update the fields
+                   MOVE 'Completed' TO BOOKING-STATUS
+                   MOVE 'Y' TO CHECKOUT-FLAG
+                   *> Write back the updated record
+                   REWRITE BOOKING-RECORD
+                       INVALID KEY
+                       DISPLAY RED-COLOR "Error updating booking status"
+                           RESET-COLOR
+                       NOT INVALID KEY
+               DISPLAY GREEN-COLOR "Booking status updated to Completed"
+                           RESET-COLOR
+                   END-REWRITE
+           END-READ
+           CLOSE BOOKING-FILE.
 
         CHECK-AND-UPDATE-CHECKOUT-DATE.
            *> Get current date
@@ -293,22 +432,32 @@
            *> Check if current date is earlier than scheduled checkout
            IF FUNCTION INTEGER-OF-DATE(WS-CURRENT-DATE) <
                FUNCTION INTEGER-OF-DATE(CHECKOUT-DATE)
-               DISPLAY "Early checkout detected."
-               DISPLAY "Original checkout date: " CHECKOUT-DATE
-               DISPLAY "Actual checkout date: " WS-CURRENT-DATE
+               DISPLAY " "
+               DISPLAY "Early checkout processed."
+               DISPLAY "Original checkout date: " CHECKOUT-DATE(1:4) "/"
+                       CHECKOUT-DATE(5:2) "/" CHECKOUT-DATE(7:2)
+               DISPLAY "Actual checkout date: " WS-CURRENT-DATE(1:4) "/"
+                       WS-CURRENT-DATE(5:2) "/" WS-CURRENT-DATE(7:2)
+               DISPLAY " "
                MOVE WS-CURRENT-DATE TO CHECKOUT-DATE
                MOVE 'Y' TO WS-EARLY-CHECKOUT-FLAG
 
                *> Update the booking record with new checkout date
                REWRITE BOOKING-RECORD
                    INVALID KEY
-                       DISPLAY "Error updating checkout date"
+                       DISPLAY RED-COLOR "Error updating checkout date"
+                        RESET-COLOR
                    NOT INVALID KEY
-                       DISPLAY "Checkout date updated successfully."
+                       DISPLAY GREEN-COLOR
+                        "Guest checkout completed successfully."
+                        DISPLAY " "
+                        RESET-COLOR
                END-REWRITE
            ELSE
                MOVE 'N' TO WS-EARLY-CHECKOUT-FLAG
-               DISPLAY "Checkout on scheduled date: " CHECKOUT-DATE
+               DISPLAY "Checkout on scheduled date: "
+               CHECKOUT-DATE(1:4) "/"
+                       CHECKOUT-DATE(5:2) "/" CHECKOUT-DATE(7:2)
            END-IF.
 
         CLOSE-FILES.

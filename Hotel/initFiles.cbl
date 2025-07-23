@@ -16,6 +16,10 @@
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS INVOICE-ID.
+           SELECT GUEST-FILE ASSIGN TO '../DATA/GUESTS.DAT'
+               ORGANIZATION IS INDEXED
+               ACCESS MODE IS DYNAMIC
+               RECORD KEY IS GUEST-ID.
        DATA DIVISION.
 
        FILE SECTION.
@@ -28,6 +32,9 @@
        FD  INVOICE-FILE.
        COPY "./CopyBooks/INVOICES.cpy".
 
+       FD  GUEST-FILE.
+       COPY "./CopyBooks/GUESTS.cpy".
+
        WORKING-STORAGE SECTION.
        01 WS-DUMMY-VALUE     PIC X VALUE ' '.
        01  WS-FILE-STATUS    PIC 99.
@@ -36,12 +43,15 @@
            OPEN OUTPUT CUSTOMER-FILE
            OPEN OUTPUT BOOKING-FILE
            OPEN OUTPUT INVOICE-FILE
+           OPEN OUTPUT GUEST-FILE
 
            *> Optionally write a dummy record, or just close to create empty files
            CLOSE CUSTOMER-FILE
            CLOSE BOOKING-FILE
            CLOSE INVOICE-FILE
+           CLOSE GUEST-FILE
 
-           DISPLAY "Files initialized (CUSTOMERS, BOOKINGS, INVOICES)."
+           DISPLAY
+           "Files initialized (CUSTOMERS, BOOKINGS, INVOICES, GUESTS)."
            STOP RUN.
        END PROGRAM initFiles.

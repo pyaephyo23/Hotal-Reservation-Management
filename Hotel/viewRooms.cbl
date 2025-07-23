@@ -26,6 +26,12 @@
        01  WS-ROOM-COUNTER         PIC 999 VALUE 0.
        01  WS-ACTIVE-BOOKINGS      PIC 999 VALUE 0.
        01  MENU-CHOICE             PIC 9.
+
+       *> Color codes for display
+       01 RED-COLOR          PIC X(8) VALUE X"1B5B33316D".
+       01 GREEN-COLOR        PIC X(8) VALUE X"1B5B33326D".
+       01 RESET-COLOR        PIC X(4) VALUE X"1B5B306D".
+
        01  WS-HEADER-1.
            05 FILLER               PIC X(5) VALUE 'ROOM'.
            05 FILLER               PIC X(5) VALUE SPACES.
@@ -62,7 +68,7 @@
        MAIN-LOOP.
            PERFORM UNTIL MENU-CHOICE = 9
            DISPLAY
-           "***********************************************************"
+           "**************************************************"
            DISPLAY "View Hotel Rooms"
            DISPLAY "1. View All Rooms"
            DISPLAY "2. View Single Rooms"
@@ -70,7 +76,7 @@
            DISPLAY "4. View Delux Rooms"
            DISPLAY "9. Go Back."
            DISPLAY
-           "***********************************************************"
+           "**************************************************"
            ACCEPT MENU-CHOICE
            EVALUATE MENU-CHOICE
                WHEN 1 PERFORM All-ROOMS-DSP
@@ -78,7 +84,8 @@
                WHEN 3 PERFORM DOUBLE-ROOMS-DSP
                WHEN 4 PERFORM DELUX-ROOMS-DSP
                WHEN 9 GOBACK
-               WHEN OTHER DISPLAY "Invalid choice"
+               WHEN OTHER
+                   DISPLAY RED-COLOR "Invalid selection." RESET-COLOR
            END-EVALUATE
            END-PERFORM.
            GOBACK.

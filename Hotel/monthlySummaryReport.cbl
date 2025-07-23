@@ -1,10 +1,4 @@
-******************************************************************
-      * Author: [Pyae Phyo kyaw]
-      * Date: 2025-07-18
-      * Purpose: Monthly Summary Report - Check-ins, Check-outs,
-      *          Occupancy Rate, and Revenue
-      * Tectonics: cobc
-      ******************************************************************
+
        IDENTIFICATION DIVISION.
        PROGRAM-ID. monthlySummaryReport.
 
@@ -223,9 +217,9 @@
            MOVE WS-MONTHLY-REVENUE TO WS-DISPLAY-REVENUE
 
            DISPLAY " "
-           DISPLAY "=========================================="
+           DISPLAY "=================================================="
            DISPLAY "        MONTHLY SUMMARY REPORT"
-           DISPLAY "=========================================="
+           DISPLAY "=================================================="
            DISPLAY "Report Month: " WS-REPORT-MONTH "/" WS-REPORT-YEAR
            DISPLAY " "
            DISPLAY "CHECK-IN/CHECK-OUT ACTIVITY:"
@@ -245,7 +239,7 @@
            DISPLAY "REVENUE:"
            DISPLAY "  Monthly Revenue      : $"
            FUNCTION TRIM(WS-DISPLAY-REVENUE)
-           DISPLAY "=========================================="
+           DISPLAY "=================================================="
            DISPLAY " ".
 
        END PROGRAM monthlySummaryReport.

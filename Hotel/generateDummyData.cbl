@@ -1,9 +1,4 @@
-******************************************************************
-      * Author: System
-      * Date: 2025-07-18
-      * Purpose: Generate dummy expired bookings for testing
-      * Tectonics: cobc
-      ******************************************************************
+
        IDENTIFICATION DIVISION.
        PROGRAM-ID. generateDummyData.
 
@@ -42,10 +37,10 @@
        01  WS-STARTING-BOOKING-ID  PIC 9(5).
 
        01  WS-EXPIRED-DATES.
-           05 FILLER PIC 9(8) VALUE 20250701.  
-           05 FILLER PIC 9(8) VALUE 20250702.  
-           05 FILLER PIC 9(8) VALUE 20250703.  
-           05 FILLER PIC 9(8) VALUE 20250704.  
+           05 FILLER PIC 9(8) VALUE 20250701.
+           05 FILLER PIC 9(8) VALUE 20250702.
+           05 FILLER PIC 9(8) VALUE 20250703.
+           05 FILLER PIC 9(8) VALUE 20250704.
            05 FILLER PIC 9(8) VALUE 20250705.
 
        01  WS-EXPIRED-DATES-ARRAY REDEFINES WS-EXPIRED-DATES.
@@ -63,9 +58,9 @@
 
        PROCEDURE DIVISION.
        MAIN-PROCEDURE.
-           DISPLAY "=========================================="
+           DISPLAY "=================================================="
            DISPLAY "    DUMMY EXPIRED BOOKINGS GENERATOR"
-           DISPLAY "=========================================="
+           DISPLAY "=================================================="
            DISPLAY "This will create 5 expired bookings for testing."
            DISPLAY " "
 
@@ -80,7 +75,7 @@
            DISPLAY "Starting from Booking ID: " WS-STARTING-BOOKING-ID
            DISPLAY " "
            DISPLAY "You can now test the expired booking cancellation."
-           DISPLAY "=========================================="
+           DISPLAY "=================================================="
 
            STOP RUN.
 

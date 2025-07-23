@@ -51,6 +51,7 @@
            05 WS-AVAILABLE-ROOM-PRICE PIC 9(9).
        *> File status
        01 WS-FILE-STATUS     PIC 99.
+       01 WS-FORMATTED-PRICE PIC ZZZZZZZZ9.
 
        *> Auto-increment counters
        01 WS-NEXT-CUSTOMER-ID PIC 9(5).
@@ -97,16 +98,21 @@
        01 WS-CURRENT-ROOM-ID PIC X(5).
        01 WS-BOOKING-EOF     PIC X VALUE 'N'.
        01 WS-USER-CANCELLED  PIC X VALUE 'N'.
+
+       *> Color codes for display
+       01 RED-COLOR          PIC X(8) VALUE X"1B5B33316D".
+       01 GREEN-COLOR        PIC X(8) VALUE X"1B5B33326D".
+       01 RESET-COLOR        PIC X(4) VALUE X"1B5B306D".
        LINKAGE SECTION.
        01 LINK PIC 9.
 
        PROCEDURE DIVISION USING LINK.
 
        MAIN-PAGE.
-           DISPLAY "***************************************************"
+           DISPLAY "**************************************************"
            DISPLAY "1. Book Room"
-           DISPLAY "9. Go back to Main Menu"
-           DISPLAY "***************************************************"
+           DISPLAY "9. Return to Main Menu"
+           DISPLAY "**************************************************"
            ACCEPT WS-CHOICE
            EVALUATE WS-CHOICE
                WHEN 1
@@ -115,7 +121,7 @@
                WHEN 9
                    GOBACK
                WHEN OTHER
-                   DISPLAY "Invalid option. Try again."
+                   DISPLAY RED-COLOR "Invalid selection." RESET-COLOR
                    GO TO MAIN-PAGE
            END-EVALUATE.
 
@@ -148,12 +154,6 @@
 
            IF WS-FOUND = 'Y'
                *> Step 4: Get customer information
-               PERFORM VALIDATE-CUSTOMER-NAME
-               IF WS-USER-CANCELLED = 'Y'
-                   PERFORM BOOK-ROOM-RETRY
-                   EXIT PARAGRAPH
-               END-IF
-
                PERFORM HANDLE-CUSTOMER-RECORD
                IF WS-USER-CANCELLED = 'Y'
                    PERFORM BOOK-ROOM-RETRY
@@ -163,31 +163,39 @@
                *> Step 5: Create booking
                PERFORM CREATE-BOOKING
 
-               DISPLAY "========== Booking Completed =========="
+           DISPLAY GREEN-COLOR
+           "=============== Booking Completed ==============="
                DISPLAY "Booking ID: " WS-BOOKING-ID
                DISPLAY "Room ID:    " WS-ROOM-ID
                DISPLAY "Room Type:  " WS-ROOM-TYPE
                DISPLAY "Customer ID:" WS-CUSTOMER-ID
                DISPLAY "Customer Name: " WS-CUSTOMER-NAME
-               DISPLAY "Check-in Date: " WS-CHECKIN-DATE
-               DISPLAY "Check-out Date: " WS-CHECKOUT-DATE
-               DISPLAY "Created At: " WS-CREATED-AT-TIMESTAMP
-               DISPLAY "========================================"
+               DISPLAY "Customer Phone: " WS-CUSTOMER-PHONE
+               DISPLAY "Check-in Date: " WS-CHECKIN-DATE(1:4) "/"
+                       WS-CHECKIN-DATE(5:2) "/" WS-CHECKIN-DATE(7:2)
+               DISPLAY "Check-out Date: " WS-CHECKOUT-DATE(1:4) "/"
+                       WS-CHECKOUT-DATE(5:2) "/" WS-CHECKOUT-DATE(7:2)
+               DISPLAY "Created At: " WS-CREATED-AT-TIMESTAMP(1:4) "/"
+                       WS-CREATED-AT-TIMESTAMP(5:2) "/"
+                       WS-CREATED-AT-TIMESTAMP(7:2)
+            DISPLAY
+            "=================================================="
+               RESET-COLOR
            ELSE
                *> Only show "no rooms available" if user didn't cancel
                IF WS-USER-CANCELLED = 'N'
-                   DISPLAY "No available rooms of type " WS-ROOM-TYPE
-                           " for the requested dates."
+                   DISPLAY "Sorry, no " WS-ROOM-TYPE
+                         " rooms are available for your selected dates."
                END-IF
            END-IF
 
            PERFORM BOOK-ROOM-RETRY.
 
        BOOK-ROOM-RETRY.
-           DISPLAY "***************************************************"
+           DISPLAY "**************************************************"
            DISPLAY "1. Book Again"
-           DISPLAY "9. Exit"
-           DISPLAY "***************************************************"
+           DISPLAY "9. Return to Main Menu"
+           DISPLAY "**************************************************"
            ACCEPT WS-CHOICE
            EVALUATE WS-CHOICE
                WHEN 1
@@ -195,22 +203,23 @@
                WHEN 9
                     GOBACK
                WHEN OTHER
-                   DISPLAY "Invalid option. Try again."
+                   DISPLAY RED-COLOR "Invalid selection." RESET-COLOR
                    PERFORM BOOK-ROOM-RETRY
            END-EVALUATE.
 
        VALIDATE-ROOM-TYPE.
-           DISPLAY "Select Room Type:"
-           DISPLAY "1. Single"
-           DISPLAY "2. Double"
-           DISPLAY "3. Delux"
-           DISPLAY "0. Cancel booking"
-           DISPLAY "Enter choice (1-3) or 0 to cancel: "
+           DISPLAY "Please select your preferred room type:"
+           DISPLAY "1. Single Room"
+           DISPLAY "2. Double Room"
+           DISPLAY "3. Deluxe Room"
+           DISPLAY "0. Cancel reservation"
+           DISPLAY "Enter your choice (1-3) or 0 to cancel: "
            ACCEPT WS-CHOICE
-
+           DISPLAY " "
            EVALUATE WS-CHOICE
                WHEN 0
-                   DISPLAY "Booking cancelled by user."
+                   DISPLAY RED-COLOR "Booking cancelled by user."
+                   RESET-COLOR
                    MOVE 'Y' TO WS-USER-CANCELLED
                WHEN 1
                    MOVE 'Single' TO WS-ROOM-TYPE
@@ -219,22 +228,26 @@
                WHEN 3
                    MOVE 'Delux' TO WS-ROOM-TYPE
                WHEN OTHER
-                   DISPLAY "Invalid choice. Please try again."
+                   DISPLAY RED-COLOR "Invalid selection." RESET-COLOR
                    GO TO VALIDATE-ROOM-TYPE
            END-EVALUATE
 
            IF WS-USER-CANCELLED = 'N'
-               DISPLAY "Selected room type: " WS-ROOM-TYPE
+               DISPLAY GREEN-COLOR "Room type selected: " WS-ROOM-TYPE
+               RESET-COLOR
+
            END-IF.
 
        CHECK-ROOM-AVAILABILITY.
            MOVE 'N' TO WS-FOUND
            MOVE ZEROS TO WS-AVAILABLE-COUNT
 
-           DISPLAY "Checking availability for "
+           DISPLAY "Searching for available "
                    FUNCTION TRIM(WS-ROOM-TYPE)
-                   " rooms from " WS-CHECKIN-DATE
-                   " to " WS-CHECKOUT-DATE "..."
+                   " rooms from " WS-CHECKIN-DATE(1:4) "/"
+                   WS-CHECKIN-DATE(5:2) "/" WS-CHECKIN-DATE(7:2)
+                   " to " WS-CHECKOUT-DATE(1:4) "/"
+                   WS-CHECKOUT-DATE(5:2) "/" WS-CHECKOUT-DATE(7:2) "..."
 
            *> Open rooms file to get all rooms of the requested type
            OPEN INPUT ROOMS-FILE
@@ -262,7 +275,7 @@
                END-READ
            END-PERFORM
 
-           DISPLAY "Total available rooms found: " WS-AVAILABLE-COUNT
+           DISPLAY "Available rooms found: " WS-AVAILABLE-COUNT
            CLOSE ROOMS-FILE
 
            *> Display available rooms and let user choose
@@ -275,33 +288,37 @@
 
        DISPLAY-AVAILABLE-ROOMS.
            DISPLAY "Available " FUNCTION TRIM(WS-ROOM-TYPE) " rooms:"
-           DISPLAY "============================================"
+           DISPLAY "=================================================="
            PERFORM VARYING WS-TEMP-INDEX FROM 1 BY 1
                    UNTIL WS-TEMP-INDEX > WS-AVAILABLE-COUNT
+               MOVE WS-AVAILABLE-ROOM-PRICE(WS-TEMP-INDEX)
+                    TO WS-FORMATTED-PRICE
                DISPLAY WS-TEMP-INDEX ". Room "
                        WS-AVAILABLE-ROOM-ID(WS-TEMP-INDEX)
-                       " - Price: "
-                       WS-AVAILABLE-ROOM-PRICE(WS-TEMP-INDEX)
+                       " - Rate: $" WS-FORMATTED-PRICE " per night"
            END-PERFORM
-           DISPLAY "============================================"
-           DISPLAY "ENTER 0 TO CANCEL".
+           DISPLAY "=================================================="
+           DISPLAY "Enter 0 to cancel reservation".
 
        SELECT-ROOM-FROM-LIST.
-           DISPLAY "Select a room (1-" WS-AVAILABLE-COUNT
+           DISPLAY "Please select a room (1-" WS-AVAILABLE-COUNT
            ") or 0 to cancel: "
            ACCEPT WS-ROOM-CHOICE
 
            IF WS-ROOM-CHOICE = 0
-               DISPLAY "Booking cancelled by user."
+              DISPLAY RED-COLOR "Booking cancelled by user." RESET-COLOR
                MOVE 'N' TO WS-FOUND
                MOVE 'Y' TO WS-USER-CANCELLED
            ELSE IF WS-ROOM-CHOICE >= 1
                AND WS-ROOM-CHOICE <= WS-AVAILABLE-COUNT
                MOVE WS-AVAILABLE-ROOM-ID(WS-ROOM-CHOICE) TO WS-ROOM-ID
                MOVE 'Y' TO WS-FOUND
-               DISPLAY "Selected room: " WS-ROOM-ID
+               DISPLAY GREEN-COLOR "Room " WS-ROOM-ID
+               " is selected " RESET-COLOR
            ELSE
-               DISPLAY "Invalid choice. Please try again."
+             DISPLAY RED-COLOR
+             "Invalid selection. Please choose a valid room number."
+             RESET-COLOR
                GO TO SELECT-ROOM-FROM-LIST
            END-IF.
 
@@ -339,12 +356,18 @@
            *> Check if user entered 0 to cancel
            IF WS-CHECKIN-DATE = 0 OR WS-CHECKOUT-DATE = 0
            OR WS-CHOICE = 0
-               DISPLAY "Booking cancelled by user."
+              DISPLAY RED-COLOR "Booking cancelled by user." RESET-COLOR
                MOVE 'Y' TO WS-USER-CANCELLED
            END-IF.
 
        HANDLE-CUSTOMER-RECORD.
-           *> Check if customer exists by name
+           *> First get customer phone number
+           PERFORM VALIDATE-CUSTOMER-PHONE
+           IF WS-USER-CANCELLED = 'Y'
+               EXIT PARAGRAPH
+           END-IF
+
+           *> Check if customer exists by phone number
            OPEN INPUT CUSTOMER-FILE
            MOVE 'N' TO WS-ID-FOUND
            MOVE 'N' TO WS-EOF
@@ -354,18 +377,17 @@
                    AT END
                        MOVE 'Y' TO WS-EOF
                    NOT AT END
-                      IF CUSTOMER-NAME = WS-CUSTOMER-NAME
-                       DISPLAY "Customer exists with following details:"
-                       DISPLAY "ID: " CUSTOMER-ID
+                      IF CUSTOMER-PHONE = WS-CUSTOMER-PHONE
+                       DISPLAY "We found an existing guest record:"
+                       DISPLAY "Guest ID: " CUSTOMER-ID
+                       DISPLAY "Name: " CUSTOMER-NAME
                        DISPLAY "Phone: " CUSTOMER-PHONE
-                       DISPLAY "Email: " CUSTOMER-EMAIL
-                       DISPLAY "NRC: " NRC-NUMBER
-                       DISPLAY "Use this customer? (Y/N/C to cancel): "
+                    DISPLAY "Use this guest record? (Y/N/C to cancel): "
                            ACCEPT WS-EXIST-CHOICE
 
                       *> Check for cancellation
                       IF WS-EXIST-CHOICE = 'C' OR WS-EXIST-CHOICE = 'c'
-                           DISPLAY "Booking cancelled by user."
+              DISPLAY RED-COLOR "Booking cancelled by user." RESET-COLOR
                            MOVE 'Y' TO WS-USER-CANCELLED
                            CLOSE CUSTOMER-FILE
                            EXIT PARAGRAPH
@@ -373,6 +395,7 @@
 
                       IF WS-EXIST-CHOICE = 'Y' OR WS-EXIST-CHOICE = 'y'
                                MOVE CUSTOMER-ID TO WS-CUSTOMER-ID
+                               MOVE CUSTOMER-NAME TO WS-CUSTOMER-NAME
                                MOVE 'Y' TO WS-ID-FOUND
                                MOVE 'Y' TO WS-EOF
                            END-IF
@@ -380,28 +403,18 @@
                END-READ
            END-PERFORM
            CLOSE CUSTOMER-FILE
-
            IF WS-ID-FOUND NOT = 'Y' AND WS-USER-CANCELLED = 'N'
+               *> Get customer name for new customer
+               PERFORM VALIDATE-CUSTOMER-NAME
+               IF WS-USER-CANCELLED = 'Y'
+                   EXIT PARAGRAPH
+               END-IF
                *> Create new customer
                PERFORM CREATE-NEW-CUSTOMER
            END-IF.
 
        CREATE-NEW-CUSTOMER.
-           DISPLAY "Creating new customer record..."
-           PERFORM VALIDATE-CUSTOMER-PHONE
-           IF WS-USER-CANCELLED = 'Y'
-               EXIT PARAGRAPH
-           END-IF
-
-           PERFORM VALIDATE-CUSTOMER-EMAIL
-           IF WS-USER-CANCELLED = 'Y'
-               EXIT PARAGRAPH
-           END-IF
-
-           PERFORM VALIDATE-NRC-NUMBER
-           IF WS-USER-CANCELLED = 'Y'
-               EXIT PARAGRAPH
-           END-IF
+           DISPLAY "Creating new guest profile..."
 
            *> Find next customer ID
            OPEN INPUT CUSTOMER-FILE
@@ -426,14 +439,13 @@
            MOVE WS-CUSTOMER-ID TO CUSTOMER-ID
            MOVE WS-CUSTOMER-NAME TO CUSTOMER-NAME
            MOVE WS-CUSTOMER-PHONE TO CUSTOMER-PHONE
-           MOVE WS-CUSTOMER-EMAIL TO CUSTOMER-EMAIL
-           MOVE WS-NRC-NUMBER TO NRC-NUMBER
 
            OPEN I-O CUSTOMER-FILE
            WRITE CUSTOMER-RECORD
            CLOSE CUSTOMER-FILE
 
-           DISPLAY "New customer created with ID: " WS-CUSTOMER-ID.
+           DISPLAY GREEN-COLOR "New guest profile created with ID: "
+           WS-CUSTOMER-ID RESET-COLOR.
 
        CREATE-BOOKING.
            *> Generate booking ID
@@ -484,7 +496,8 @@
            MOVE WS-ROOM-ID TO ROOM-ID
            READ ROOMS-FILE KEY IS ROOM-ID
                INVALID KEY
-                   DISPLAY "Error updating room status."
+                   DISPLAY RED-COLOR
+                   "Error: Unable to update room status." RESET-COLOR
                NOT INVALID KEY
                    *> Initialize ACTIVE-BOOKING-COUNT if it contains non-numeric data
                    IF ACTIVE-BOOKING-COUNT NOT NUMERIC
@@ -496,35 +509,42 @@
            CLOSE ROOMS-FILE.
 
        VALIDATE-CUSTOMER-NAME.
-           DISPLAY "Enter Customer Name or type 'CANCEL' to cancel: "
+           DISPLAY
+           "Please enter your full name or type 'CANCEL' to cancel: "
            ACCEPT WS-CUSTOMER-NAME
-
+           DISPLAY " "
            *> Check for cancellation
            IF WS-CUSTOMER-NAME = 'CANCEL' OR WS-CUSTOMER-NAME = 'cancel'
-               DISPLAY "Booking cancelled by user."
+              DISPLAY RED-COLOR "Booking cancelled by user." RESET-COLOR
                MOVE 'Y' TO WS-USER-CANCELLED
                EXIT PARAGRAPH
            END-IF
 
            IF WS-CUSTOMER-NAME = SPACES
-               DISPLAY "Customer Name cannot be empty."
+               DISPLAY RED-COLOR
+               "Guest name is required. Please enter your full name."
+               RESET-COLOR
                GO TO VALIDATE-CUSTOMER-NAME
            END-IF.
 
        VALIDATE-CUSTOMER-PHONE.
-           DISPLAY "Enter Customer Phone or type 'CANCEL' to cancel: "
+           DISPLAY
+           "Please enter your contact phone number " NO ADVANCING
+           DISPLAY "or type 'CANCEL' to cancel: "
            ACCEPT WS-CUSTOMER-PHONE
-
+           DISPLAY " "
            *> Check for cancellation
            IF WS-CUSTOMER-PHONE = 'CANCEL'
                OR WS-CUSTOMER-PHONE = 'cancel'
-               DISPLAY "Booking cancelled by user."
+               DISPLAY RED-COLOR "Booking cancelled by user."
+               RESET-COLOR
                MOVE 'Y' TO WS-USER-CANCELLED
                EXIT PARAGRAPH
            END-IF
 
            IF WS-CUSTOMER-PHONE = SPACES
-               DISPLAY "Customer Phone cannot be empty."
+               DISPLAY RED-COLOR "Customer Phone cannot be empty."
+               RESET-COLOR
                GO TO VALIDATE-CUSTOMER-PHONE
            END-IF.
 
@@ -535,13 +555,15 @@
            *> Check for cancellation
            IF WS-CUSTOMER-EMAIL = 'CANCEL'
                OR WS-CUSTOMER-EMAIL = 'cancel'
-               DISPLAY "Booking cancelled by user."
+               DISPLAY RED-COLOR "Booking cancelled by user."
+               RESET-COLOR
                MOVE 'Y' TO WS-USER-CANCELLED
                EXIT PARAGRAPH
            END-IF
 
            IF WS-CUSTOMER-EMAIL = SPACES
-               DISPLAY "Customer Email cannot be empty."
+               DISPLAY RED-COLOR "Customer Email cannot be empty."
+               RESET-COLOR
                GO TO VALIDATE-CUSTOMER-EMAIL
            END-IF.
 
@@ -552,13 +574,15 @@
 
            *> Check for cancellation
            IF WS-NRC-NUMBER = 'CANCEL' OR WS-NRC-NUMBER = 'cancel'
-               DISPLAY "Booking cancelled by user."
+               DISPLAY RED-COLOR "Booking cancelled by user."
+               RESET-COLOR
                MOVE 'Y' TO WS-USER-CANCELLED
                EXIT PARAGRAPH
            END-IF
 
            IF WS-NRC-NUMBER = SPACES
-               DISPLAY "Customer NRC Number cannot be empty."
+               DISPLAY RED-COLOR "Customer NRC Number cannot be empty."
+               RESET-COLOR
                GO TO VALIDATE-NRC-NUMBER
            END-IF.
 
@@ -567,31 +591,39 @@
            ACCEPT WS-CURRENT-DATE-DATA FROM DATE YYYYMMDD
            MOVE WS-CURRENT-DATE TO WS-CURRENT-DATE-NUM
 
-           DISPLAY "Enter Check-in Date (YYYYMMDD) or 0 to cancel: "
+           DISPLAY
+           "Enter your check-in date (YYYYMMDD) or 0 to cancel: "
            ACCEPT WS-CHECKIN-DATE
-
+           DISPLAY " "
            *> Check for cancellation
            IF WS-CHECKIN-DATE = 0
-               DISPLAY "Booking cancelled by user."
+               DISPLAY RED-COLOR "Booking cancelled by user."
+               RESET-COLOR
                MOVE 'Y' TO WS-USER-CANCELLED
                EXIT PARAGRAPH
            END-IF
 
            IF WS-CHECKIN-DATE = ZEROS OR WS-CHECKIN-DATE = SPACES
-               DISPLAY "Check-in date cannot be empty."
+               DISPLAY RED-COLOR
+               "Check-in date is required. Please enter a valid date."
+               RESET-COLOR
                GO TO VALIDATE-CHECKIN-DATE
            END-IF
            MOVE WS-CHECKIN-DATE TO WS-DATE-TO-CHECK
            PERFORM VALIDATE-DATE-FORMAT
            IF WS-VALID-FLAG = 'N'
-               DISPLAY "Invalid date format. Please use YYYYMMDD."
+               DISPLAY RED-COLOR
+               "Invalid date format. Please use YYYYMMDD." RESET-COLOR
                GO TO VALIDATE-CHECKIN-DATE
            END-IF
 
            *> Check if check-in date is not earlier than current date
            IF WS-CHECKIN-DATE < WS-CURRENT-DATE-NUM
-               DISPLAY "Check-in date cannot be earlier than today ("
-                       WS-CURRENT-DATE-NUM ")."
+               DISPLAY
+              RED-COLOR "Check-in date must be today or a future date ("
+                       WS-CURRENT-DATE-NUM(1:4) "/"
+                       WS-CURRENT-DATE-NUM(5:2) "/"
+                      WS-CURRENT-DATE-NUM(7:2) " or later)." RESET-COLOR
                GO TO VALIDATE-CHECKIN-DATE
            END-IF.
 
@@ -599,34 +631,41 @@
            DISPLAY "Enter Check-out Date (YYYYMMDD) or 0 to cancel: "
            ACCEPT WS-CHECKOUT-DATE
 
+           DISPLAY " "
            *> Check for cancellation
            IF WS-CHECKOUT-DATE = 0
-               DISPLAY "Booking cancelled by user."
+               DISPLAY RED-COLOR "Booking cancelled by user."
+               RESET-COLOR
                MOVE 'Y' TO WS-USER-CANCELLED
                EXIT PARAGRAPH
            END-IF
 
            IF WS-CHECKOUT-DATE = ZEROS OR WS-CHECKOUT-DATE = SPACES
-               DISPLAY "Check-out date cannot be empty."
+               DISPLAY RED-COLOR
+               "Check-out date is required. Please enter a valid date."
+               RESET-COLOR
                GO TO VALIDATE-CHECKOUT-DATE
            END-IF
            MOVE WS-CHECKOUT-DATE TO WS-DATE-TO-CHECK
            PERFORM VALIDATE-DATE-FORMAT
            IF WS-VALID-FLAG = 'N'
-               DISPLAY "Invalid date format. Please use YYYYMMDD."
+               DISPLAY RED-COLOR
+               "Invalid date format. Please use YYYYMMDD." RESET-COLOR
                GO TO VALIDATE-CHECKOUT-DATE
            END-IF
            IF WS-CHECKOUT-DATE <= WS-CHECKIN-DATE
-               DISPLAY "Check-out date must be after check-in date."
+               DISPLAY RED-COLOR
+               "Check-out date must be after your check-in date."
+               RESET-COLOR
                GO TO VALIDATE-CHECKOUT-DATE
            END-IF
 
            *> Calculate days difference between check-in and check-out
            PERFORM CALCULATE-DAYS-DIFFERENCE
            IF WS-DAYS-DIFFERENCE > 28
-               DISPLAY "Check-out date cannot be more than 28 days "
-                       "after check-in date."
-               DISPLAY "Days difference: " WS-DAYS-DIFFERENCE
+               DISPLAY RED-COLOR "Maximum stay duration is 28 days. "
+                   "Your selected stay is " WS-DAYS-DIFFERENCE " days."
+                   RESET-COLOR
                GO TO VALIDATE-CHECKOUT-DATE
            END-IF.
 
@@ -715,8 +754,8 @@
            *> Check if day is valid for the month
            IF WS-DATE-DAY > WS-MAX-DAYS
                MOVE 'N' TO WS-VALID-FLAG
-               DISPLAY "Invalid day for month " WS-DATE-MONTH
-                       ". Maximum days: " WS-MAX-DAYS
+               DISPLAY RED-COLOR "Invalid day for month " WS-DATE-MONTH
+                       ". Maximum days: " WS-MAX-DAYS RESET-COLOR
                IF WS-DATE-MONTH = 2 AND WS-IS-LEAP-YEAR = 'Y'
                    DISPLAY "(" WS-DATE-YEAR " is a leap year)"
                END-IF
@@ -747,7 +786,8 @@
 
            *> Ensure result is reasonable (fallback protection)
            IF WS-DAYS-DIFFERENCE < 0 OR WS-DAYS-DIFFERENCE > 400
-               DISPLAY "Warning: Date calculation may be inaccurate"
+               DISPLAY RED-COLOR
+               "Warning: Date calculation may be inaccurate" RESET-COLOR
                *> Use simplified calculation as fallback
                COMPUTE WS-DAYS-DIFFERENCE =
                    (WS-CHECKOUT-YEAR - WS-CHECKIN-YEAR) * 365

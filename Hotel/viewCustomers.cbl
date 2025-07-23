@@ -36,6 +36,11 @@
        01  WS-CUSTOMER-NAME-UPPER  PIC X(20).
        01  WS-BOOKING-COUNT        PIC 999 VALUE 0.
 
+       *> Color codes for display
+       01 RED-COLOR          PIC X(8) VALUE X"1B5B33316D".
+       01 GREEN-COLOR        PIC X(8) VALUE X"1B5B33326D".
+       01 RESET-COLOR        PIC X(4) VALUE X"1B5B306D".
+
        01  WS-HEADER-1.
            05 FILLER               PIC X(11) VALUE 'CUSTOMER ID'.
            05 FILLER               PIC X(3) VALUE SPACES.
@@ -86,21 +91,22 @@
        MAIN-LOOP.
            PERFORM UNTIL MENU-CHOICE = 9
            DISPLAY
-           "***********************************************************"
+           "**************************************************"
            DISPLAY "View Hotel Customers"
            DISPLAY "1. View All Customers"
            DISPLAY "2. Search Customer By ID"
            DISPLAY "3. Search Customer By Name"
            DISPLAY "9. Go Back"
            DISPLAY
-           "***********************************************************"
+           "**************************************************"
            ACCEPT MENU-CHOICE
            EVALUATE MENU-CHOICE
                WHEN 1 PERFORM ALL-CUSTOMERS-DSP
                WHEN 2 PERFORM SEARCH-BY-ID
                WHEN 3 PERFORM SEARCH-BY-NAME
                WHEN 9 GOBACK
-               WHEN OTHER DISPLAY "Invalid choice"
+               WHEN OTHER
+                   DISPLAY RED-COLOR "Invalid selection." RESET-COLOR
            END-EVALUATE
            END-PERFORM.
            GOBACK.
@@ -182,8 +188,6 @@
            MOVE CUSTOMER-ID TO WS-DL-CUSTOMER-ID
            MOVE CUSTOMER-NAME TO WS-DL-NAME
            MOVE CUSTOMER-PHONE TO WS-DL-PHONE
-           MOVE CUSTOMER-EMAIL TO WS-DL-EMAIL
-           MOVE NRC-NUMBER TO WS-NRC-NUMBER
            MOVE WS-BOOKING-COUNT TO WS-DL-BOOKING-COUNT
            DISPLAY WS-DETAIL-LINE.
 
