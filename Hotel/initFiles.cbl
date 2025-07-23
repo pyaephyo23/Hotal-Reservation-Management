@@ -20,6 +20,10 @@
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS CHECKIN-ID.
+           SELECT STAYLOG-FILE ASSIGN TO '../DATA/STAYLOG.DAT'
+               ORGANIZATION IS INDEXED
+               ACCESS MODE IS DYNAMIC
+               RECORD KEY IS STAYLOG-ID.
        DATA DIVISION.
 
        FILE SECTION.
@@ -35,6 +39,9 @@
        FD  CHECKINOUT-FILE.
        COPY "./CopyBooks/CHECKINoUT.cpy".
 
+       FD  STAYLOG-FILE.
+       COPY "./CopyBooks/STAYLOG.cpy".
+
        WORKING-STORAGE SECTION.
        01 WS-DUMMY-VALUE     PIC X VALUE ' '.
        01  WS-FILE-STATUS    PIC 99.
@@ -44,15 +51,17 @@
            OPEN OUTPUT BOOKING-FILE
            OPEN OUTPUT INVOICE-FILE
            OPEN OUTPUT CHECKINOUT-FILE
+           OPEN OUTPUT STAYLOG-FILE
 
            *> Optionally write a dummy record, or just close to create empty files
            CLOSE CUSTOMER-FILE
            CLOSE BOOKING-FILE
            CLOSE INVOICE-FILE
            CLOSE CHECKINOUT-FILE
+           CLOSE STAYLOG-FILE
 
            DISPLAY
            "Files initialized: CUSTOMERS,"
-           " BOOKINGS, INVOICES, CHECKINOUT"
+           " BOOKINGS, INVOICES, CHECKINOUT, STAYLOG"
            STOP RUN.
        END PROGRAM initFiles.
