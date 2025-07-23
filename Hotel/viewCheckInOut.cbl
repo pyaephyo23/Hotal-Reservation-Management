@@ -263,9 +263,8 @@
                STRING WS-TEMP-TIME(1:2) ":" WS-TEMP-TIME(3:2) ":"
                       WS-TEMP-TIME(5:2) INTO WS-FORMATTED-TIME
                DISPLAY WS-FORMATTED-DATE " " WS-FORMATTED-TIME " | "
-                       WITH NO ADVANCING
            ELSE
-               DISPLAY "         -          | " WITH NO ADVANCING
+               DISPLAY "         -          | "
            END-IF
 
            *> Display status
