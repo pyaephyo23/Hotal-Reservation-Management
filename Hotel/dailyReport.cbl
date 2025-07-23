@@ -26,11 +26,6 @@
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS INVOICE-ID.
 
-           SELECT CHECKINOUT-FILE ASSIGN TO './DATA/CHECKINOUT.DAT'
-               ORGANIZATION IS INDEXED
-               ACCESS MODE IS DYNAMIC
-               RECORD KEY IS CHECKIN-ID.
-
        DATA DIVISION.
        FILE SECTION.
        FD  BOOKING-FILE.
@@ -42,20 +37,18 @@
        FD  INVOICES-FILE.
        COPY "./CopyBooks/INVOICES.cpy".
 
-       FD  CHECKINOUT-FILE.
-       COPY "./CopyBooks/CHECKINOUT.cpy".
-
        WORKING-STORAGE SECTION.
        01  WS-BOOKING-FILE-STATUS  PIC 99.
        01  WS-ROOMS-FILE-STATUS    PIC 99.
        01  WS-INVOICE-FILE-STATUS  PIC 99.
-       01  WS-CHECKINOUT-FILE-STATUS PIC 99.
        01  WS-EOF                  PIC X VALUE 'N'.
 
        01  WS-REPORT-DATE.
            05 WS-REPORT-YEAR       PIC 9(4).
            05 WS-REPORT-MONTH      PIC 9(2).
            05 WS-REPORT-DAY        PIC 9(2).
+       01  WS-CHECKIN-DATE         PIC 9(8).
+       01  WS-CHECKOUT-DATE        PIC 9(8).
 
        *> Counters
        01  WS-CHECKINS-TODAY       PIC 9(3) VALUE 0.
@@ -66,6 +59,7 @@
 
        *> Calculations
        01  WS-OCCUPANCY-RATE       PIC 9(3)V99.
+       01  WS-OCCUPANCY-PERCENT    PIC 999V99.
 
        *> Display fields
        01  WS-DISPLAY-CHECKINS     PIC ZZ9.
@@ -74,6 +68,11 @@
        01  WS-DISPLAY-TOTAL        PIC ZZ9.
        01  WS-DISPLAY-OCCUPANCY    PIC ZZ9.99.
        01  WS-DISPLAY-REVENUE      PIC $(9).
+
+       *> Temporary fields
+       01  WS-TOTAL-CHARGE-DEC     PIC 9(9)V99.
+       01  WS-TARGET-BOOKING-ID    PIC 9(5).
+       01  WS-INVOICE-FOUND        PIC X VALUE 'N'.
 
        LINKAGE SECTION.
        01 LINK PIC 9.
@@ -91,11 +90,10 @@
            ACCEPT WS-REPORT-DATE FROM DATE YYYYMMDD.
 
        COUNT-CHECKINS-CHECKOUTS.
-           *> Count check-ins from CHECKINOUT file
-           OPEN INPUT CHECKINOUT-FILE
-           IF WS-CHECKINOUT-FILE-STATUS NOT = 00
-               DISPLAY "Error opening CHECKINOUT file: "
-                       WS-CHECKINOUT-FILE-STATUS
+           OPEN INPUT BOOKING-FILE
+           IF WS-BOOKING-FILE-STATUS NOT = 00
+               DISPLAY "Error opening BOOKING file: "
+                       WS-BOOKING-FILE-STATUS
                GOBACK
            END-IF
 
@@ -104,24 +102,30 @@
            MOVE 0 TO WS-CHECKOUTS-TODAY
 
            PERFORM UNTIL WS-EOF = 'Y'
-               READ CHECKINOUT-FILE NEXT RECORD
+               READ BOOKING-FILE NEXT RECORD
                AT END
                    MOVE 'Y' TO WS-EOF
                NOT AT END
-                   PERFORM CHECK-CHECKINOUT-DATES
+                   PERFORM CHECK-BOOKING-DATES
                END-READ
            END-PERFORM
 
-           CLOSE CHECKINOUT-FILE.
+           CLOSE BOOKING-FILE.
 
-       CHECK-CHECKINOUT-DATES.
+       CHECK-BOOKING-DATES.
+           *> Convert dates to numeric for comparison
+           MOVE CHECKIN-DATE TO WS-CHECKIN-DATE
+           MOVE CHECKOUT-DATE TO WS-CHECKOUT-DATE
+
            *> Count check-ins today
-           IF ACTUAL-CHECKIN-DATE = WS-REPORT-DATE
+           IF WS-CHECKIN-DATE = WS-REPORT-DATE AND
+              CHEKIN-FLAG = 'Y'
                ADD 1 TO WS-CHECKINS-TODAY
            END-IF
 
            *> Count check-outs today
-           IF CHECKOUT-FLAG = 'Y' AND CHECKOUT-DATE = WS-REPORT-DATE
+           IF WS-CHECKOUT-DATE = WS-REPORT-DATE AND
+              CHECKOUT-FLAG = 'Y'
                ADD 1 TO WS-CHECKOUTS-TODAY
            END-IF.
 
@@ -160,9 +164,16 @@
            END-IF.
 
        CALCULATE-DAILY-REVENUE.
+           OPEN INPUT BOOKING-FILE
+           IF WS-BOOKING-FILE-STATUS NOT = 00
+               DISPLAY "Error opening BOOKING file for revenue"
+               GOBACK
+           END-IF
+
            OPEN INPUT INVOICES-FILE
            IF WS-INVOICE-FILE-STATUS NOT = 00
                DISPLAY "Error opening INVOICES file"
+               CLOSE BOOKING-FILE
                GOBACK
            END-IF
 
@@ -170,19 +181,57 @@
            MOVE 0 TO WS-DAILY-REVENUE
 
            PERFORM UNTIL WS-EOF = 'Y'
-               READ INVOICES-FILE NEXT RECORD
+               READ BOOKING-FILE NEXT RECORD
                AT END
                    MOVE 'Y' TO WS-EOF
                NOT AT END
-                   *> Include revenue from invoices created today
-                   IF CREATED-AT-IV = WS-REPORT-DATE
-                       COMPUTE WS-DAILY-REVENUE = WS-DAILY-REVENUE +
-                               TOTAL-CHARGE
-                   END-IF
+                   PERFORM CHECK-DAILY-BOOKING-REVENUE
                END-READ
            END-PERFORM
 
+           CLOSE BOOKING-FILE
            CLOSE INVOICES-FILE.
+
+       CHECK-DAILY-BOOKING-REVENUE.
+           *> Only process completed bookings
+           IF BOOKING-STATUS = "Completed"
+               MOVE CHECKIN-DATE TO WS-CHECKIN-DATE
+               MOVE CHECKOUT-DATE TO WS-CHECKOUT-DATE
+
+               *> Include revenue if guest was staying on report date
+               IF WS-CHECKOUT-DATE = WS-REPORT-DATE
+                   PERFORM GET-INVOICE-REVENUE
+               END-IF
+           END-IF.
+
+       GET-INVOICE-REVENUE.
+           MOVE BOOKING-ID TO WS-TARGET-BOOKING-ID
+           PERFORM FIND-INVOICE-FOR-BOOKING
+           IF WS-INVOICE-FOUND = 'Y'
+               COMPUTE WS-DAILY-REVENUE = WS-DAILY-REVENUE +
+               TOTAL-CHARGE
+           END-IF.
+
+       FIND-INVOICE-FOR-BOOKING.
+           MOVE 'N' TO WS-INVOICE-FOUND
+
+           *> Close and reopen invoices file for fresh search
+           CLOSE INVOICES-FILE
+           OPEN INPUT INVOICES-FILE
+
+           IF WS-INVOICE-FILE-STATUS = 00
+               MOVE 'N' TO WS-EOF
+               PERFORM UNTIL WS-EOF = 'Y' OR WS-INVOICE-FOUND = 'Y'
+                   READ INVOICES-FILE NEXT RECORD
+                   AT END
+                       MOVE 'Y' TO WS-EOF
+                   NOT AT END
+                       IF BOOKING-ID-IV = WS-TARGET-BOOKING-ID
+                           MOVE 'Y' TO WS-INVOICE-FOUND
+                       END-IF
+                   END-READ
+               END-PERFORM
+           END-IF.
 
        DISPLAY-SUMMARY-REPORT.
            MOVE WS-CHECKINS-TODAY TO WS-DISPLAY-CHECKINS

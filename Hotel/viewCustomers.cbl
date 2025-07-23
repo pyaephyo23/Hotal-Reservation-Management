@@ -34,15 +34,7 @@
        01  WS-SEARCH-NAME          PIC X(20).
        01  WS-SEARCH-NAME-UPPER    PIC X(20).
        01  WS-CUSTOMER-NAME-UPPER  PIC X(20).
-       01  WS-SEARCH-PHONE         PIC X(15).
        01  WS-BOOKING-COUNT        PIC 999 VALUE 0.
-       01  WS-UPDATE-CHOICE        PIC X.
-       01  WS-FOUND-CUSTOMER       PIC X VALUE 'N'.
-       01  WS-NEW-NAME             PIC X(20).
-       01  WS-NEW-PHONE            PIC X(15).
-       01  WS-NEW-AGE              PIC 99.
-       01  WS-NEW-GENDER           PIC X.
-       01  WS-NEW-NRC              PIC X(25).
 
        01  WS-HEADER-1.
            05 FILLER               PIC X(11) VALUE 'CUSTOMER ID'.
@@ -85,7 +77,10 @@
            05 FILLER               PIC X(7) VALUE SPACES.
            05 WS-DL-NRC-NUMBER     PIC X(25).
 
-       PROCEDURE DIVISION.
+       LINKAGE SECTION.
+       01 LINK PIC 9.
+
+       PROCEDURE DIVISION USING LINK.
 
        MAIN-LOOP.
            PERFORM UNTIL MENU-CHOICE = 9
@@ -93,7 +88,7 @@
            "***********************************************************"
            DISPLAY "View Hotel Customers"
            DISPLAY "1. View All Customers"
-           DISPLAY "2. Search Customer By Phone"
+           DISPLAY "2. Search Customer By ID"
            DISPLAY "3. Search Customer By Name"
            DISPLAY "9. Go Back"
            DISPLAY
@@ -101,7 +96,7 @@
            ACCEPT MENU-CHOICE
            EVALUATE MENU-CHOICE
                WHEN 1 PERFORM ALL-CUSTOMERS-DSP
-               WHEN 2 PERFORM SEARCH-BY-PHONE
+               WHEN 2 PERFORM SEARCH-BY-ID
                WHEN 3 PERFORM SEARCH-BY-NAME
                WHEN 9 GOBACK
                WHEN OTHER DISPLAY "Invalid choice"
@@ -120,32 +115,21 @@
            END-IF
            PERFORM CLOSE-FILES.
 
-       SEARCH-BY-PHONE.
-           DISPLAY "Enter Customer Phone Number to search: "
-           ACCEPT WS-SEARCH-PHONE
+       SEARCH-BY-ID.
+           DISPLAY "Enter Customer ID to search: "
+           ACCEPT CUSTOMER-ID
            MOVE 'N' TO WS-EOF
-           MOVE 'N' TO WS-FOUND-CUSTOMER
-           MOVE 0 TO WS-CUSTOMER-COUNTER
            PERFORM OPEN-FILES
            IF WS-EOF = 'N'
                PERFORM DISPLAY-HEADERS
-               PERFORM UNTIL WS-EOF = 'Y'
-                   READ CUSTOMER-FILE NEXT RECORD
-                       AT END
-                           MOVE 'Y' TO WS-EOF
-                       NOT AT END
-                           IF CUSTOMER-PHONE = WS-SEARCH-PHONE
-                               PERFORM DISPLAY-CUSTOMER-RECORD
-                               ADD 1 TO WS-CUSTOMER-COUNTER
-                               MOVE 'Y' TO WS-FOUND-CUSTOMER
-                               MOVE 'Y' TO WS-EOF
-                           END-IF
-                   END-READ
-               END-PERFORM
+               READ CUSTOMER-FILE KEY IS CUSTOMER-ID
+                   INVALID KEY
+                       DISPLAY "Customer ID " CUSTOMER-ID " not found."
+                   NOT INVALID KEY
+                       PERFORM DISPLAY-CUSTOMER-RECORD
+                       ADD 1 TO WS-CUSTOMER-COUNTER
+               END-READ
                PERFORM DISPLAY-SUMMARY
-               IF WS-FOUND-CUSTOMER = 'Y'
-                   PERFORM ASK-UPDATE-CUSTOMER
-               END-IF
            END-IF
            PERFORM CLOSE-FILES.
 
@@ -155,7 +139,6 @@
            MOVE FUNCTION UPPER-CASE(WS-SEARCH-NAME)
            TO WS-SEARCH-NAME-UPPER
            MOVE 'N' TO WS-EOF
-           MOVE 'N' TO WS-FOUND-CUSTOMER
            MOVE 0 TO WS-CUSTOMER-COUNTER
            PERFORM OPEN-FILES
            IF WS-EOF = 'N'
@@ -171,14 +154,10 @@
                               WS-CUSTOMER-NAME-UPPER(1:10)
                                PERFORM DISPLAY-CUSTOMER-RECORD
                                ADD 1 TO WS-CUSTOMER-COUNTER
-                               MOVE 'Y' TO WS-FOUND-CUSTOMER
                            END-IF
                    END-READ
                END-PERFORM
                PERFORM DISPLAY-SUMMARY
-               IF WS-FOUND-CUSTOMER = 'Y'
-                   PERFORM ASK-UPDATE-CUSTOMER
-               END-IF
            END-IF
            PERFORM CLOSE-FILES.
 
@@ -230,78 +209,5 @@
 
        CLOSE-FILES.
            CLOSE CUSTOMER-FILE BOOKING-FILE.
-
-       ASK-UPDATE-CUSTOMER.
-           DISPLAY " "
-           DISPLAY 
-           "Do you want to update this customer's information? (Y/N): "
-           ACCEPT WS-UPDATE-CHOICE
-           IF WS-UPDATE-CHOICE = 'Y' OR WS-UPDATE-CHOICE = 'y'
-               PERFORM UPDATE-CUSTOMER-INFO
-           END-IF.
-
-       UPDATE-CUSTOMER-INFO.
-           DISPLAY " "
-           DISPLAY "========== UPDATE CUSTOMER INFORMATION =========="
-           DISPLAY "Current Customer ID: " CUSTOMER-ID
-           DISPLAY "Current Name: " CUSTOMER-NAME
-           DISPLAY "Current Phone: " CUSTOMER-PHONE
-           DISPLAY "Current Age: " CUSTOMER-AGE
-           DISPLAY "Current Gender: " CUSTOMER-GENDER
-           DISPLAY "Current NRC: " NRC-NUMBER
-           DISPLAY " "
-           
-           DISPLAY 
-           "Enter new information (press ENTER to keep current):"
-           
-           DISPLAY "New Name [" FUNCTION TRIM(CUSTOMER-NAME) "]: "
-           ACCEPT WS-NEW-NAME
-           IF WS-NEW-NAME NOT = SPACES
-               MOVE WS-NEW-NAME TO CUSTOMER-NAME
-           END-IF
-           
-           DISPLAY "New Phone [" FUNCTION TRIM(CUSTOMER-PHONE) "]: "
-           ACCEPT WS-NEW-PHONE
-           IF WS-NEW-PHONE NOT = SPACES
-               MOVE WS-NEW-PHONE TO CUSTOMER-PHONE
-           END-IF
-           
-           DISPLAY "New Age [" CUSTOMER-AGE "]: "
-           ACCEPT WS-NEW-AGE
-           IF WS-NEW-AGE NOT = 0
-               MOVE WS-NEW-AGE TO CUSTOMER-AGE
-           END-IF
-           
-           DISPLAY "New Gender [" CUSTOMER-GENDER "]: "
-           ACCEPT WS-NEW-GENDER
-           IF WS-NEW-GENDER NOT = SPACES
-               MOVE WS-NEW-GENDER TO CUSTOMER-GENDER
-           END-IF
-           
-           DISPLAY "New NRC Number [" FUNCTION TRIM(NRC-NUMBER) "]: "
-           ACCEPT WS-NEW-NRC
-           IF WS-NEW-NRC NOT = SPACES
-               MOVE WS-NEW-NRC TO NRC-NUMBER
-           END-IF
-           
-           PERFORM SAVE-CUSTOMER-CHANGES.
-
-       SAVE-CUSTOMER-CHANGES.
-           CLOSE CUSTOMER-FILE
-           OPEN I-O CUSTOMER-FILE
-           IF WS-FILE-STATUS = '00'
-               REWRITE CUSTOMER-RECORD
-               IF WS-FILE-STATUS = '00'
-                   DISPLAY " "
-                   DISPLAY "Customer information updated successfully!"
-                   DISPLAY "Updated Information:"
-                   PERFORM DISPLAY-CUSTOMER-RECORD
-               ELSE
-                   DISPLAY "Error updating customer: " WS-FILE-STATUS
-               END-IF
-           ELSE
-               DISPLAY "Error opening file for update: " WS-FILE-STATUS
-           END-IF
-           CLOSE CUSTOMER-FILE.
 
        END PROGRAM viewCustomers.

@@ -11,25 +11,20 @@
        ENVIRONMENT DIVISION.
        INPUT-OUTPUT SECTION.
        FILE-CONTROL.
-           SELECT BOOKING-FILE ASSIGN TO './DATA/BOOKINGS.DAT'
+           SELECT BOOKING-FILE ASSIGN TO '../DATA/BOOKINGS.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS BOOKING-ID.
 
-           SELECT ROOMS-FILE ASSIGN TO './DATA/ROOMS.DAT'
+           SELECT ROOMS-FILE ASSIGN TO '../DATA/ROOMS.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS ROOM-ID.
 
-           SELECT INVOICES-FILE ASSIGN TO './DATA/INVOICES.DAT'
+           SELECT INVOICES-FILE ASSIGN TO '../DATA/INVOICES.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS INVOICE-ID.
-
-           SELECT CHECKINOUT-FILE ASSIGN TO './DATA/CHECKINOUT.DAT'
-               ORGANIZATION IS INDEXED
-               ACCESS MODE IS DYNAMIC
-               RECORD KEY IS CHECKIN-ID.
 
        DATA DIVISION.
        FILE SECTION.
@@ -42,14 +37,10 @@
        FD  INVOICES-FILE.
        COPY "./CopyBooks/INVOICES.cpy".
 
-       FD  CHECKINOUT-FILE.
-       COPY "./CopyBooks/CHECKINOUT.cpy".
-
        WORKING-STORAGE SECTION.
        01  WS-BOOKING-FILE-STATUS  PIC 99.
        01  WS-ROOMS-FILE-STATUS    PIC 99.
        01  WS-INVOICE-FILE-STATUS  PIC 99.
-       01  WS-CHECKINOUT-FILE-STATUS PIC 99.
        01  WS-EOF                  PIC X VALUE 'N'.
 
        01  WS-REPORT-DATE.
@@ -57,6 +48,9 @@
            05 WS-REPORT-MONTH      PIC 99.
            05 WS-REPORT-DAY        PIC 99.
 
+       01  WS-REPORT-DATE-NUM      PIC 9(8).
+       01  WS-CHECKIN-DATE-NUM     PIC 9(8).
+       01  WS-CHECKOUT-DATE-NUM    PIC 9(8).
        01  WS-BOOKING-MONTH        PIC 99.
        01  WS-BOOKING-YEAR         PIC 9(4).
 
@@ -69,6 +63,7 @@
 
        *> Calculations
        01  WS-OCCUPANCY-RATE       PIC 9(3)V99.
+       01  WS-OCCUPANCY-PERCENT    PIC 999V99.
 
        *> Display fields
        01  WS-DISPLAY-CHECKINS     PIC Z(4)9.
@@ -77,6 +72,9 @@
        01  WS-DISPLAY-TOTAL        PIC ZZ9.
        01  WS-DISPLAY-OCCUPANCY    PIC ZZ9.99.
        01  WS-DISPLAY-REVENUE      PIC Z(8)9.99.
+
+       *> Temporary fields
+       01  WS-TOTAL-CHARGE-DEC     PIC 9(9)V99.
 
        LINKAGE SECTION.
        01 LINK PIC 9.
@@ -91,14 +89,17 @@
            GOBACK.
 
        GET-REPORT-DATE.
-           ACCEPT WS-REPORT-DATE FROM DATE YYYYMMDD.
+           ACCEPT WS-REPORT-DATE FROM DATE YYYYMMDD
+           COMPUTE WS-REPORT-DATE-NUM =
+               WS-REPORT-YEAR * 10000 +
+               WS-REPORT-MONTH * 100 +
+               WS-REPORT-DAY.
 
        COUNT-CHECKIN-OUT.
-           *> Count check-ins and check-outs from CHECKINOUT file
-           OPEN INPUT CHECKINOUT-FILE
-           IF WS-CHECKINOUT-FILE-STATUS NOT = 00
-               DISPLAY "Error opening CHECKINOUT file: "
-                       WS-CHECKINOUT-FILE-STATUS
+           OPEN INPUT BOOKING-FILE
+           IF WS-BOOKING-FILE-STATUS NOT = 00
+               DISPLAY "Error opening BOOKING file: "
+                       WS-BOOKING-FILE-STATUS
                GOBACK
            END-IF
 
@@ -107,38 +108,43 @@
            MOVE 0 TO WS-CHECKOUTS-MONTH
 
            PERFORM UNTIL WS-EOF = 'Y'
-               READ CHECKINOUT-FILE NEXT RECORD
+               READ BOOKING-FILE NEXT RECORD
                AT END
                    MOVE 'Y' TO WS-EOF
                NOT AT END
-                   PERFORM CHECK-MONTHLY-CHECKINOUT-DATES
+                   PERFORM CHECK-MONTHLY-BOOKING-DATES
                END-READ
            END-PERFORM
 
-           CLOSE CHECKINOUT-FILE.
+           CLOSE BOOKING-FILE.
 
-       CHECK-MONTHLY-CHECKINOUT-DATES.
+       CHECK-MONTHLY-BOOKING-DATES.
+           *> Convert dates to numeric for comparison
+           MOVE FUNCTION NUMVAL(CHECKIN-DATE) TO WS-CHECKIN-DATE-NUM
+           MOVE FUNCTION NUMVAL(CHECKOUT-DATE) TO WS-CHECKOUT-DATE-NUM
+
            *> Extract year and month from check-in date
-           DIVIDE ACTUAL-CHECKIN-DATE BY 10000 GIVING WS-BOOKING-YEAR
+           DIVIDE WS-CHECKIN-DATE-NUM BY 10000 GIVING WS-BOOKING-YEAR
            COMPUTE WS-BOOKING-MONTH =
-               (ACTUAL-CHECKIN-DATE - (WS-BOOKING-YEAR * 10000)) / 100
+               (WS-CHECKIN-DATE-NUM - (WS-BOOKING-YEAR * 10000)) / 100
 
            *> Count check-ins in this month
            IF WS-BOOKING-YEAR = WS-REPORT-YEAR AND
-              WS-BOOKING-MONTH = WS-REPORT-MONTH
+              WS-BOOKING-MONTH = WS-REPORT-MONTH AND
+              CHEKIN-FLAG = 'Y'
                ADD 1 TO WS-CHECKINS-MONTH
            END-IF
 
-           *> Count check-outs in this month (only if check-out occurred)
-           IF CHECKOUT-FLAG = 'Y'
-               DIVIDE CHECKOUT-DATE BY 10000 GIVING WS-BOOKING-YEAR
-               COMPUTE WS-BOOKING-MONTH =
-                   (CHECKOUT-DATE - (WS-BOOKING-YEAR * 10000)) / 100
+           *> Extract year and month from check-out date
+           DIVIDE WS-CHECKOUT-DATE-NUM BY 10000 GIVING WS-BOOKING-YEAR
+           COMPUTE WS-BOOKING-MONTH =
+               (WS-CHECKOUT-DATE-NUM - (WS-BOOKING-YEAR * 10000)) / 100
 
-               IF WS-BOOKING-YEAR = WS-REPORT-YEAR AND
-                  WS-BOOKING-MONTH = WS-REPORT-MONTH
-                   ADD 1 TO WS-CHECKOUTS-MONTH
-               END-IF
+           *> Count check-outs in this month
+           IF WS-BOOKING-YEAR = WS-REPORT-YEAR AND
+              WS-BOOKING-MONTH = WS-REPORT-MONTH AND
+              CHECKOUT-FLAG = 'Y'
+               ADD 1 TO WS-CHECKOUTS-MONTH
            END-IF.
 
        CALCULATE-OCCUPANCY.
