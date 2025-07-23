@@ -88,13 +88,6 @@
        01 WS-ROOM-TYPE                PIC X(10).
        01 WS-ROOM-PRICE               PIC 9(9).
 
-       *> Multiple guests information
-       01 WS-GUEST-COUNT              PIC 9(2) VALUE 0.
-       01 WS-GUEST-COUNTER            PIC 9(2) VALUE 0.
-       01 WS-GUEST-INFO OCCURS 5 TIMES.
-           05 WS-GUEST-NAME           PIC X(20).
-           05 WS-GUEST-PHONE          PIC X(15).
-
        *> Billing calculations
        01 WS-STAY-DAYS                PIC 9(3).
        01 WS-ROOM-CHARGES             PIC 9(9).
@@ -110,49 +103,20 @@
        *> Invoice generation
        01 WS-NEXT-INVOICE-ID          PIC 9(5) VALUE 0.
 
-       *> Color codes for display - ANSI escape sequences
-       01 RED-COLOR          PIC X(8) VALUE X"1B5B33316D".
-       01 GREEN-COLOR        PIC X(8) VALUE X"1B5B33326D".
-       01 RESET-COLOR        PIC X(4) VALUE X"1B5B306D".
-       01 BLUE-COLOR         PIC X(8) VALUE X"1B5B33346D".
-       01 YELLOW-COLOR       PIC X(8) VALUE X"1B5B33336D".
-       01 CYAN-COLOR         PIC X(8) VALUE X"1B5B33366D".
-
-       *> Screen formatting
-       01 CLEAR-SCREEN       PIC X(4) VALUE X"1B5B324A".
-       01 WS-DUMMY-INPUT     PIC X.
-
        LINKAGE SECTION.
        01 LINK                        PIC 9.
 
        PROCEDURE DIVISION USING LINK.
        MAIN-PROCEDURE.
            PERFORM UNTIL WS-EXIT-FLAG = 'Y'
-               DISPLAY CLEAR-SCREEN
-               DISPLAY BLUE-COLOR
-               DISPLAY "==============================================="
-               "===="
-               "============================"
-               DISPLAY "                           GUEST CHECK-OUT SYST"
-               "EM  "
-               DISPLAY "==============================================="
-               "===="
-               "============================"
-               RESET-COLOR
-               DISPLAY "                                               "
-
-               DISPLAY "                              1. Check-out Gues"
-               "t (Room ID only)"
-
                DISPLAY " "
-               DISPLAY "==============================================="
-               "================================"
-               DISPLAY "                              9. Return to Main"
-               "Me"
-               "nu                          "
-
-               DISPLAY "==============================================="
-               "================================"
+               DISPLAY "=============================================="
+               DISPLAY "            GUEST CHECK-OUT SYSTEM           "
+               DISPLAY "=============================================="
+               DISPLAY "1. Check-out"
+               DISPLAY "9. Return to Main Menu"
+               DISPLAY "=============================================="
+               DISPLAY "Enter choice: "
                ACCEPT WS-CHOICE
 
                EVALUATE WS-CHOICE
@@ -161,67 +125,51 @@
                    WHEN 9
                        MOVE 'Y' TO WS-EXIT-FLAG
                    WHEN OTHER
-                       DISPLAY " "
-                       DISPLAY RED-COLOR "*** ERROR: Invalid selection."
-                       "Pleas"
-                       "e choose 1 or 9. ***" RESET-COLOR
-                       DISPLAY " "
-                       DISPLAY "Press ENTER to continue..."
-                       ACCEPT WS-DUMMY-INPUT
+                       DISPLAY "Invalid choice. Please try again."
                END-EVALUATE
            END-PERFORM
 
            GOBACK.
 
-       *> Check-out guest with Room ID only
+       *> Check-out guest with Check-in ID and Room Number verification
        CHECKOUT.
-           DISPLAY CLEAR-SCREEN
-           DISPLAY CYAN-COLOR
-           DISPLAY "==================================================="
-           "============================"
-           DISPLAY "                           GUEST CHECK-OUT         "
-           DISPLAY "==================================================="
-           "============================"
-           RESET-COLOR
-           DISPLAY "                                                   "
-           DISPLAY "              Enter Room ID to check out guest     "
-           DISPLAY "                                                   "
+           DISPLAY " "
+           DISPLAY "========== CHECK-OUT =========="
+           DISPLAY "Enter Check-in ID: "
+           ACCEPT WS-SEARCH-CHECKIN-ID
 
-           DISPLAY "==================================================="
-           "============================"
-           DISPLAY "Enter Room ID: "
+           DISPLAY "Enter Room Number: "
            ACCEPT WS-SEARCH-ROOM-ID
 
            MOVE 'N' TO WS-FOUND
            OPEN I-O CHECKINOUT-FILE
-           MOVE 'N' TO WS-EOF
-
-           *> Search for active check-in record by room number
-           PERFORM UNTIL WS-EOF = 'Y' OR WS-FOUND = 'Y'
-               READ CHECKINOUT-FILE NEXT
-                   AT END
-                       MOVE 'Y' TO WS-EOF
-                   NOT AT END
-                       IF ROOM-ID-IO = WS-SEARCH-ROOM-ID AND
-                          CHECKOUT-FLAG = 'N'
+           MOVE WS-SEARCH-CHECKIN-ID TO CHECKIN-ID
+           READ CHECKINOUT-FILE KEY IS CHECKIN-ID
+               INVALID KEY
+                   DISPLAY "No check-in record found with ID "
+                           WS-SEARCH-CHECKIN-ID
+               NOT INVALID KEY
+                   *> Verify room number matches
+                   IF ROOM-ID-IO NOT = WS-SEARCH-ROOM-ID
+                       DISPLAY "Error: Room number does not match."
+                       DISPLAY "Check-in ID " WS-SEARCH-CHECKIN-ID
+                               " is for room " ROOM-ID-IO
+                               ", not " WS-SEARCH-ROOM-ID
+                   ELSE
+                       IF CHECKOUT-FLAG = 'Y'
+                           DISPLAY
+                           "Checked out already completed."
+                       ELSE
                            MOVE 'Y' TO WS-FOUND
+                           PERFORM PROCESS-CHECKOUT
                        END-IF
-               END-READ
-           END-PERFORM
+                   END-IF
+           END-READ
+           CLOSE CHECKINOUT-FILE
 
            IF WS-FOUND = 'N'
-               DISPLAY " "
-               DISPLAY RED-COLOR "No active guest found in room "
-                       WS-SEARCH-ROOM-ID RESET-COLOR
-               DISPLAY
-               "Either room is empty or guest already checked out."
-               DISPLAY " "
-               DISPLAY "Press ENTER to continue..."
-               ACCEPT WS-DUMMY-INPUT
-           ELSE
-               PERFORM PROCESS-CHECKOUT
-           END-IF
-           CLOSE CHECKINOUT-FILE.
+               DISPLAY "Check-out not completed."
+           END-IF.
 
        *> Process the actual checkout
        PROCESS-CHECKOUT.
@@ -230,14 +178,15 @@
 
            *> Get confirmation
            DISPLAY " "
-           DISPLAY YELLOW-COLOR
-           "Confirm check-out for this guest? (Y/N): "
-           RESET-COLOR
+           DISPLAY "Confirm check-out? (Y/N): "
            ACCEPT WS-CONFIRMATION
 
            IF WS-CONFIRMATION = 'Y' OR WS-CONFIRMATION = 'y'
                *> Get current date and time
                PERFORM GET-CURRENT-DATETIME
+
+               *> Get additional information
+               PERFORM GET-GUEST-INFORMATION
 
                *> Calculate billing
                PERFORM CALCULATE-BILLING
@@ -251,39 +200,15 @@
                *> Update room status
                PERFORM UPDATE-ROOM-STATUS
 
-               DISPLAY CLEAR-SCREEN
-               DISPLAY GREEN-COLOR
-               DISPLAY "==============================================="
-               "================================"
-               DISPLAY "                           CHECK-OUT COMPLETED "
-               "SUCCESSFULLY                       "
-               DISPLAY "==============================================="
-               "================================"
-               RESET-COLOR
-               DISPLAY "                                               "
-               DISPLAY "          Guest has been successfully checked o"
-               "ut!"
-               DISPLAY "          Room " ROOM-ID-IO " is now Available."
-               DISPLAY "                                               "
-
-               DISPLAY "==============================================="
-               "================================"
                DISPLAY " "
-               DISPLAY "Press ENTER to continue..."
-               ACCEPT WS-DUMMY-INPUT
+               DISPLAY "✓ Check-out completed successfully!"
+               DISPLAY "✓ Room " ROOM-ID-IO " is now Available."
            ELSE
-               DISPLAY " "
-               DISPLAY RED-COLOR "Check-out cancelled." RESET-COLOR
-               DISPLAY " "
-               DISPLAY "Press ENTER to continue..."
-               ACCEPT WS-DUMMY-INPUT
+               DISPLAY "Check-out cancelled."
            END-IF.
 
        *> Display check-in details
        DISPLAY-CHECKIN-DETAILS.
-           *> Get guest information first to display guest count
-           PERFORM GET-GUEST-INFORMATION
-
            *> Format check-in date and time
            MOVE ACTUAL-CHECKIN-DATE TO WS-TEMP-DATE
            STRING WS-TEMP-DATE(1:4) "-" WS-TEMP-DATE(5:2) "-"
@@ -293,24 +218,14 @@
            STRING WS-TEMP-TIME(1:2) ":" WS-TEMP-TIME(3:2) ":"
                   WS-TEMP-TIME(5:2) INTO WS-FORMATTED-TIME
 
-           DISPLAY CLEAR-SCREEN
-           DISPLAY GREEN-COLOR
-           DISPLAY "==================================================="
-           "============================"
-           DISPLAY "                        CHECK-IN DETAILS FOUND     "
-           DISPLAY "==================================================="
-           "============================"
-           RESET-COLOR
-           DISPLAY "                                                   "
-           DISPLAY "  Check-in ID:      " CHECKIN-ID
-           DISPLAY "  Room Number:      " ROOM-ID-IO
-           DISPLAY "  Booking ID:       " BOOKING-ID-IO
-           DISPLAY "  Check-in:         " WS-FORMATTED-DATE " "
+           DISPLAY " "
+           DISPLAY "========== CHECK-IN DETAILS =========="
+           DISPLAY "Check-in ID: " CHECKIN-ID
+           DISPLAY "Room Number: " ROOM-ID-IO
+           DISPLAY "Booking ID:  " BOOKING-ID-IO
+           DISPLAY "Check-in:    " WS-FORMATTED-DATE " "
            WS-FORMATTED-TIME
-           DISPLAY "  Number of Guests: " WS-GUEST-COUNT
-           DISPLAY "                                                   "
-           DISPLAY "==================================================="
-           "=============================".
+           DISPLAY "======================================".
 
        *> Get current date and time
        GET-CURRENT-DATETIME.
@@ -322,50 +237,33 @@
 
        *> Get guest and room information
        GET-GUEST-INFORMATION.
-           *> Initialize guest count
-           MOVE 0 TO WS-GUEST-COUNT
-
-           *> Get customer info from staylog - collect ALL guests
+           *> Get customer info from staylog
            OPEN INPUT STAYLOG-FILE
            MOVE 'N' TO WS-EOF
+           MOVE 'N' TO WS-FOUND
 
-           PERFORM UNTIL WS-EOF = 'Y'
+           PERFORM UNTIL WS-EOF = 'Y' OR WS-FOUND = 'Y'
                READ STAYLOG-FILE NEXT
                    AT END
                        MOVE 'Y' TO WS-EOF
                    NOT AT END
                        IF CHECKIN-ID-SL = CHECKIN-ID
-                           ADD 1 TO WS-GUEST-COUNT
-                           IF WS-GUEST-COUNT <= 5
-                               MOVE CUSTOMER-ID-SL TO CUSTOMER-ID
-                               OPEN INPUT CUSTOMER-FILE
-                               READ CUSTOMER-FILE KEY IS CUSTOMER-ID
-                               INVALID KEY
-                                  MOVE "Unknown" TO
-                                  WS-GUEST-NAME(WS-GUEST-COUNT)
-                                  MOVE "Unknown" TO
-                                  WS-GUEST-PHONE(WS-GUEST-COUNT)
-                               NOT INVALID KEY
-                                  MOVE CUSTOMER-NAME TO
-                                  WS-GUEST-NAME(WS-GUEST-COUNT)
-                                  MOVE CUSTOMER-PHONE TO
-                                  WS-GUEST-PHONE(WS-GUEST-COUNT)
-                               END-READ
-                               CLOSE CUSTOMER-FILE
-                           END-IF
+                           MOVE CUSTOMER-ID-SL TO CUSTOMER-ID
+                           OPEN INPUT CUSTOMER-FILE
+                           READ CUSTOMER-FILE KEY IS CUSTOMER-ID
+                           INVALID KEY
+                              MOVE "Unknown" TO WS-CUSTOMER-NAME
+                              MOVE "Unknown" TO WS-CUSTOMER-PHONE
+                           NOT INVALID KEY
+                              MOVE CUSTOMER-NAME TO WS-CUSTOMER-NAME
+                               MOVE CUSTOMER-PHONE TO WS-CUSTOMER-PHONE
+                           END-READ
+                           CLOSE CUSTOMER-FILE
+                           MOVE 'Y' TO WS-FOUND
                        END-IF
                END-READ
            END-PERFORM
            CLOSE STAYLOG-FILE
-
-           *> Set primary guest info (first guest for backward compatibility)
-           IF WS-GUEST-COUNT > 0
-               MOVE WS-GUEST-NAME(1) TO WS-CUSTOMER-NAME
-               MOVE WS-GUEST-PHONE(1) TO WS-CUSTOMER-PHONE
-           ELSE
-               MOVE "Unknown" TO WS-CUSTOMER-NAME
-               MOVE "Unknown" TO WS-CUSTOMER-PHONE
-           END-IF
 
            *> Get room info
            OPEN INPUT ROOMS-FILE
@@ -396,17 +294,8 @@
            COMPUTE WS-ROOM-CHARGES = WS-ROOM-PRICE * WS-STAY-DAYS
 
            *> Get service charges
-           DISPLAY CLEAR-SCREEN
-           DISPLAY CYAN-COLOR
-           DISPLAY "==================================================="
-           "============================"
-           DISPLAY "                           BILLING CALCULATION     "
-           DISPLAY "==================================================="
-           "============================"
-           RESET-COLOR
-           DISPLAY "                                                   "
+           DISPLAY " "
            DISPLAY "Enter additional service charges (0 if none): "
-
            ACCEPT WS-SERVICE-CHARGES
 
            *> Calculate tax
@@ -434,16 +323,9 @@
 
            WRITE INVOICE-RECORD
                INVALID KEY
-                   DISPLAY " "
-                   DISPLAY RED-COLOR "*** ERROR: Unable to create inv"
-                   "oice record. ***" RESET-COLOR
-                   DISPLAY " "
+                   DISPLAY "Error: Unable to create invoice record."
                NOT INVALID KEY
-                   DISPLAY " "
-                   DISPLAY GREEN-COLOR "✓ Invoice created successfull"
-                   "y!"
-                   RESET-COLOR
-                   DISPLAY " "
+                   DISPLAY "✓ Invoice created successfully!"
            END-WRITE
            CLOSE INVOICES-FILE
 
@@ -461,78 +343,36 @@
            STRING WS-TEMP-TIME(1:2) ":" WS-TEMP-TIME(3:2) ":"
                   WS-TEMP-TIME(5:2) INTO WS-FORMATTED-TIME
 
-           DISPLAY CLEAR-SCREEN
-           DISPLAY YELLOW-COLOR
-           DISPLAY "==================================================="
-           "============================"
-           DISPLAY "                                   INVOICE         "
-           "                                "
-           DISPLAY "==================================================="
-           "============================"
-           RESET-COLOR
-           DISPLAY "                       Invoice ID:     " INVOICE-ID
-           DISPLAY "                       Check-out Date: "
-           WS-FORMATTED-DATE
-           DISPLAY "                       Check-out Time: "
-           WS-FORMATTED-TIME
            DISPLAY " "
-           DISPLAY CYAN-COLOR "                     Guest Information:"
-           RESET-COLOR
-
-           *> Display all guests
-           PERFORM VARYING WS-GUEST-COUNTER FROM 1 BY 1
-                   UNTIL WS-GUEST-COUNTER > WS-GUEST-COUNT
-               IF WS-GUEST-COUNTER = 1
-                   DISPLAY "                       Guest "
-                   WS-GUEST-COUNTER ":      "
-                   WS-GUEST-NAME(WS-GUEST-COUNTER)
-                   DISPLAY "                       Phone:        "
-                   WS-GUEST-PHONE(WS-GUEST-COUNTER)
-               ELSE
-                   DISPLAY "                       Guest "
-                   WS-GUEST-COUNTER ":      "
-                   WS-GUEST-NAME(WS-GUEST-COUNTER)
-                   DISPLAY "                       Phone:        "
-                   WS-GUEST-PHONE(WS-GUEST-COUNTER)
-               END-IF
-           END-PERFORM
-
+           DISPLAY "================================================"
+           DISPLAY "                   INVOICE                      "
+           DISPLAY "================================================"
+           DISPLAY "Invoice ID:     " INVOICE-ID
+           DISPLAY "Check-out Date: " WS-FORMATTED-DATE
+           DISPLAY "Check-out Time: " WS-FORMATTED-TIME
            DISPLAY " "
-           DISPLAY CYAN-COLOR "                     Stay Information:"
-           RESET-COLOR
-           DISPLAY "                       Room:         " ROOM-ID-IO
-           " ("
-           FUNCTION TRIM(WS-ROOM-TYPE) ")"
-           DISPLAY "                       Check-in ID:  " CHECKIN-ID
-           DISPLAY "                       Days Stayed:  " WS-STAY-DAYS
-
+           DISPLAY "Guest Information:"
+           DISPLAY "  Name:         " WS-CUSTOMER-NAME
+           DISPLAY "  Phone:        " WS-CUSTOMER-PHONE
+           DISPLAY " "
+           DISPLAY "Stay Information:"
+           DISPLAY "  Room:         " ROOM-ID-IO " (" WS-ROOM-TYPE ")"
+           DISPLAY "  Check-in ID:  " CHECKIN-ID
+           DISPLAY "  Days Stayed:  " WS-STAY-DAYS
+           DISPLAY " "
+           DISPLAY "Charges:"
            MOVE WS-ROOM-PRICE TO WS-FORMATTED-PRICE
-           DISPLAY "                       Room Rate:    "
-           WS-FORMATTED-PRICE " per night"
-           DISPLAY " "
-           DISPLAY CYAN-COLOR "                     Charges:"
-           RESET-COLOR
-
+           DISPLAY "  Room Rate:    " WS-FORMATTED-PRICE " per night"
            MOVE WS-ROOM-CHARGES TO WS-FORMATTED-TOTAL
-           DISPLAY "                       Room Charges: "
-           WS-FORMATTED-TOTAL
+           DISPLAY "  Room Charges: " WS-FORMATTED-TOTAL
            MOVE WS-SERVICE-CHARGES TO WS-FORMATTED-TOTAL
-           DISPLAY "                       Service Fees: "
-           WS-FORMATTED-TOTAL
+           DISPLAY "  Service Fees: " WS-FORMATTED-TOTAL
            MOVE WS-TAX-AMOUNT TO WS-FORMATTED-TOTAL
-           DISPLAY "                       Tax (15%):    "
-           WS-FORMATTED-TOTAL
-           DISPLAY "==================================================="
-           "============================"
+           DISPLAY "  Tax (15%):    " WS-FORMATTED-TOTAL
+           DISPLAY "================================================"
            MOVE WS-TOTAL-AMOUNT TO WS-FORMATTED-TOTAL
-           DISPLAY GREEN-COLOR "                     TOTAL AMOUNT: "
-           WS-FORMATTED-TOTAL
-           RESET-COLOR
-           DISPLAY "==================================================="
-           "============================"
-           DISPLAY " "
-           DISPLAY "Press ENTER to continue..."
-           ACCEPT WS-DUMMY-INPUT.
+           DISPLAY "  TOTAL AMOUNT: " WS-FORMATTED-TOTAL
+           DISPLAY "================================================".
 
        *> Update checkout record
        UPDATE-CHECKOUT-RECORD.
@@ -542,15 +382,9 @@
 
            REWRITE CHECKINOUT-RECORD
                INVALID KEY
-                   DISPLAY " "
-                   DISPLAY RED-COLOR "*** ERROR: Could not update che"
-                   "ck-out record. ***" RESET-COLOR
-                   DISPLAY " "
+                   DISPLAY "Error: Could not update check-out record."
                NOT INVALID KEY
-                   DISPLAY " "
-                  DISPLAY GREEN-COLOR "✓ Check-out record updated suc"
-                   "cessfully!" RESET-COLOR
-                   DISPLAY " "
+                   DISPLAY "✓ Check-out record updated successfully!"
            END-REWRITE.
 
        *> Update room status to Available
@@ -559,24 +393,16 @@
            MOVE ROOM-ID-IO TO ROOM-ID
            READ ROOMS-FILE KEY IS ROOM-ID
                INVALID KEY
-                   DISPLAY " "
-                   DISPLAY YELLOW-COLOR "Warning: Could not find room "
-                   ROOM-ID-IO RESET-COLOR
-                   DISPLAY " "
+                   DISPLAY "Warning: Could not find room " ROOM-ID-IO
                NOT INVALID KEY
                    MOVE 'Available' TO R-STATUS
                    REWRITE ROOMS-RECORD
                        INVALID KEY
-                           DISPLAY " "
-                           DISPLAY RED-COLOR "*** ERROR: Unable to upda"
-                           "te room status. ***" RESET-COLOR
-                           DISPLAY " "
+                           DISPLAY
+                           "Error: Unable to update room status."
                        NOT INVALID KEY
-                           DISPLAY " "
-                          DISPLAY GREEN-COLOR "✓ Room status updated "
-                           "to"
-                           " Available." RESET-COLOR
-                           DISPLAY " "
+                           DISPLAY
+                           "✓ Room status updated to Available."
                    END-REWRITE
            END-READ
            CLOSE ROOMS-FILE.

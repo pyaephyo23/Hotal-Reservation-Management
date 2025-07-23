@@ -22,25 +22,13 @@
        01 WS-FOUND                    PIC X VALUE 'N'.
        01 WS-EOF                      PIC X VALUE 'N'.
 
-       *> Color codes for display - ANSI escape sequences
-       01 RED-COLOR          PIC X(8) VALUE X"1B5B33316D".
-       01 GREEN-COLOR        PIC X(8) VALUE X"1B5B33326D".
-       01 RESET-COLOR        PIC X(4) VALUE X"1B5B306D".
-       01 BLUE-COLOR         PIC X(8) VALUE X"1B5B33346D".
-       01 YELLOW-COLOR       PIC X(8) VALUE X"1B5B33336D".
-       01 CYAN-COLOR         PIC X(8) VALUE X"1B5B33366D".
-
-       *> Screen formatting
-       01 CLEAR-SCREEN       PIC X(4) VALUE X"1B5B324A".
-       01 WS-DUMMY-INPUT     PIC X.
-
        *> Search criteria
        01 WS-SEARCH-CHECKIN-ID        PIC 9(5).
        01 WS-SEARCH-ROOM-ID           PIC X(5).
 
        *> Display formatting
        01 WS-RECORD-COUNT             PIC 9(3) VALUE 0.
-       01 WS-DISPLAY-COUNT            PIC ZZZ.
+       01 WS-DISPLAY-COUNT            PIC Z99.
 
        *> Date/time formatting
        01 WS-TEMP-DATE.
@@ -68,33 +56,18 @@
        PROCEDURE DIVISION USING LINK.
        MAIN-PROCEDURE.
            PERFORM UNTIL WS-EXIT-FLAG = 'Y'
-               DISPLAY CLEAR-SCREEN
-               DISPLAY BLUE-COLOR
-           DISPLAY "==================================================="
-           "============================"
-           DISPLAY "                       CHECK-IN/OUT RECORD VIEWER"
-           " SYSTEM                      "
-           DISPLAY "==================================================="
-           "============================"
-           RESET-COLOR
-           DISPLAY "                                                   "
-           DISPLAY "                  1. View All Check-in/out Records"
-           "                          "
-           DISPLAY "                  2. View Active Check-ins (Not ch"
-           "ecked out)                "
-           DISPLAY "                  3. View Completed Check-ins (Che"
-           "cked out)                 "
-           DISPLAY "                  4. Search by Check-in ID        "
-           "                          "
-           DISPLAY "                  5. Search by Room Number        "
-           "                          "
-           DISPLAY "                                                   "
-           DISPLAY "==================================================="
-           "============================"
-           DISPLAY "                  9. Go Back to Main Menu       "
-           "                     "
-           DISPLAY "==================================================="
-           "============================"
+               DISPLAY " "
+               DISPLAY "=============================================="
+               DISPLAY "         CHECK-IN/OUT RECORD VIEWER          "
+               DISPLAY "=============================================="
+               DISPLAY "1. View All Check-in/out Records"
+               DISPLAY "2. View Active Check-ins (Not checked out)"
+               DISPLAY "3. View Completed Check-ins (Checked out)"
+               DISPLAY "4. Search by Check-in ID"
+               DISPLAY "5. Search by Room Number"
+               DISPLAY "9. Return to Main Menu"
+               DISPLAY "=============================================="
+               DISPLAY "Enter choice: " WITH NO ADVANCING
                ACCEPT WS-CHOICE
 
                EVALUATE WS-CHOICE
@@ -111,13 +84,7 @@
                    WHEN 9
                        MOVE 'Y' TO WS-EXIT-FLAG
                    WHEN OTHER
-                       DISPLAY " "
-                       DISPLAY RED-COLOR "*** ERROR: Invalid selection."
-                       "P"
-                       "lease choose 1-5 or 9. ***" RESET-COLOR
-                       DISPLAY " "
-                       DISPLAY "Press ENTER to continue..."
-                       ACCEPT WS-DUMMY-INPUT
+                       DISPLAY "Invalid choice. Please try again."
                END-EVALUATE
            END-PERFORM
 
@@ -125,16 +92,9 @@
 
        *> View all check-in/out records
        VIEW-ALL-RECORDS.
-           DISPLAY CLEAR-SCREEN
-           DISPLAY CYAN-COLOR
-           DISPLAY "==============================================="
-           "===================================="
-           DISPLAY "                     ALL CHECK-IN/OUT RECORDS "
-           "                               "
-           DISPLAY "==============================================="
-           "===================================="
-           RESET-COLOR
            DISPLAY " "
+           DISPLAY
+           "============== ALL CHECK-IN/OUT RECORDS ================"
            PERFORM DISPLAY-HEADER
            MOVE 0 TO WS-RECORD-COUNT
            MOVE 'N' TO WS-EOF
@@ -155,16 +115,9 @@
 
        *> View only active check-ins (not checked out yet)
        VIEW-ACTIVE-CHECKINS.
-           DISPLAY CLEAR-SCREEN
-           DISPLAY CYAN-COLOR
-           DISPLAY "==============================================="
-           "===================================="
-           DISPLAY "                   ACTIVE CHECK-INS (NOT CHECK"
-           "ED OUT)                       "
-           DISPLAY "==============================================="
-           "===================================="
-           RESET-COLOR
            DISPLAY " "
+           DISPLAY
+           "=========== ACTIVE CHECK-INS (NOT CHECKED OUT) ============"
            PERFORM DISPLAY-HEADER
            MOVE 0 TO WS-RECORD-COUNT
            MOVE 'N' TO WS-EOF
@@ -187,16 +140,9 @@
 
        *> View only completed check-ins (already checked out)
        VIEW-COMPLETED-CHECKINS.
-           DISPLAY CLEAR-SCREEN
-           DISPLAY CYAN-COLOR
-           DISPLAY "==============================================="
-           "===================================="
-           DISPLAY "                 COMPLETED CHECK-INS (CHECKED "
-           "OUT)                         "
-           DISPLAY "==============================================="
-           "===================================="
-           RESET-COLOR
            DISPLAY " "
+           DISPLAY
+           "========= COMPLETED CHECK-INS (CHECKED OUT) ============"
            PERFORM DISPLAY-HEADER
            MOVE 0 TO WS-RECORD-COUNT
            MOVE 'N' TO WS-EOF
@@ -219,22 +165,13 @@
 
        *> Search for a specific check-in by ID
        SEARCH-BY-CHECKIN-ID.
-           DISPLAY CLEAR-SCREEN
-           DISPLAY YELLOW-COLOR
-           DISPLAY "==============================================="
-           "===================================="
-           DISPLAY "                       SEARCH BY CHECK-IN ID  "
-           "                               "
-           DISPLAY "==============================================="
-           "===================================="
-           RESET-COLOR
            DISPLAY " "
-           DISPLAY "Enter Check-in ID: "
+           DISPLAY "Enter Check-in ID: " WITH NO ADVANCING
            ACCEPT WS-SEARCH-CHECKIN-ID
 
            DISPLAY " "
-           DISPLAY CYAN-COLOR "CHECK-IN DETAILS (ID: "
-                   WS-SEARCH-CHECKIN-ID ")" RESET-COLOR
+           DISPLAY "======= CHECK-IN DETAILS (ID: "
+                   WS-SEARCH-CHECKIN-ID ") ======="
            PERFORM DISPLAY-HEADER
 
            MOVE 'N' TO WS-FOUND
@@ -242,10 +179,8 @@
            MOVE WS-SEARCH-CHECKIN-ID TO CHECKIN-ID
            READ CHECKINOUT-FILE KEY IS CHECKIN-ID
                INVALID KEY
-                   DISPLAY " "
-                   DISPLAY RED-COLOR "No check-in record found with ID "
-                           WS-SEARCH-CHECKIN-ID RESET-COLOR
-                   DISPLAY " "
+                   DISPLAY "No check-in record found with ID "
+                           WS-SEARCH-CHECKIN-ID
                NOT INVALID KEY
                    PERFORM DISPLAY-RECORD
                    MOVE 'Y' TO WS-FOUND
@@ -253,33 +188,19 @@
            CLOSE CHECKINOUT-FILE
 
            IF WS-FOUND = 'N'
-               DISPLAY RED-COLOR "Check-in record not found."
-               RESET-COLOR
+               DISPLAY "Check-in record not found."
            END-IF
-           DISPLAY "==============================================="
-           "===================================="
-           DISPLAY " "
-           DISPLAY "Press ENTER to continue..."
-           ACCEPT WS-DUMMY-INPUT.
+           DISPLAY
+           "========================================================".
 
        *> Search for check-ins by room ID
        SEARCH-BY-ROOM-ID.
-           DISPLAY CLEAR-SCREEN
-           DISPLAY YELLOW-COLOR
-           DISPLAY "==============================================="
-           "===================================="
-           DISPLAY "                       SEARCH BY ROOM NUMBER  "
-           "                               "
-           DISPLAY "==============================================="
-           "===================================="
-           RESET-COLOR
            DISPLAY " "
-           DISPLAY "Enter Room ID: "
+           DISPLAY "Enter Room ID: " WITH NO ADVANCING
            ACCEPT WS-SEARCH-ROOM-ID
 
            DISPLAY " "
-           DISPLAY CYAN-COLOR "CHECK-INS FOR ROOM " WS-SEARCH-ROOM-ID
-           RESET-COLOR
+           DISPLAY "==== CHECK-INS FOR ROOM " WS-SEARCH-ROOM-ID " ===="
            PERFORM DISPLAY-HEADER
            MOVE 0 TO WS-RECORD-COUNT
            MOVE 'N' TO WS-EOF
@@ -302,14 +223,13 @@
 
        *> Display table header
        DISPLAY-HEADER.
-           DISPLAY YELLOW-COLOR
-           DISPLAY "==============================================="
-           "===================================="
-           DISPLAY "CHK-ID | ROOM   | BKG-ID  | CHECKIN DT          |"
-           " CHECKOUT DT         | STATUS"
-           DISPLAY "==============================================="
-           "===================================="
-           RESET-COLOR.
+           DISPLAY
+       "---------------------------------------------------------------"
+           DISPLAY
+        "CHK-ID | ROOM  | BKG-ID | CHECKIN DT"
+        "          | CHECKOUT DT         | STATUS"
+           DISPLAY
+       "--------------------------------------------------------------".
 
        *> Display a single check-in/out record
        DISPLAY-RECORD.
@@ -334,7 +254,6 @@
                    WS-FORMATTED-DATE " " WS-FORMATTED-TIME " | "
                    WITH NO ADVANCING
 
-
            *> Display checkout date/time or dash if not checked out
            IF CHECKOUT-FLAG = 'Y' AND CHECKOUT-DATE > 0
                MOVE CHECKOUT-DATE TO WS-TEMP-DATE
@@ -344,7 +263,7 @@
                STRING WS-TEMP-TIME(1:2) ":" WS-TEMP-TIME(3:2) ":"
                       WS-TEMP-TIME(5:2) INTO WS-FORMATTED-TIME
                DISPLAY WS-FORMATTED-DATE " " WS-FORMATTED-TIME " | "
-               WITH NO ADVANCING
+                       WITH NO ADVANCING
            ELSE
                DISPLAY "         -          | " WITH NO ADVANCING
            END-IF
@@ -359,15 +278,11 @@
        *> Display summary information
        DISPLAY-SUMMARY.
            MOVE WS-RECORD-COUNT TO WS-DISPLAY-COUNT
-           DISPLAY "==============================================="
-           "===================================="
-           DISPLAY GREEN-COLOR "Total records found: " 
-           WS-DISPLAY-COUNT
-           RESET-COLOR
-           DISPLAY "==============================================="
-           "===================================="
-           DISPLAY " "
-           DISPLAY "Press ENTER to continue..."
-           ACCEPT WS-DUMMY-INPUT.
+           DISPLAY
+        "--------------------------------------------------------------"
+           DISPLAY
+           "Total records found: " WS-DISPLAY-COUNT
+           DISPLAY
+       "==============================================================".
 
        END PROGRAM viewCheckInOut.
