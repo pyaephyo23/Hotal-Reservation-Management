@@ -70,16 +70,9 @@
        01  WS-TOTAL-ROOMS          PIC 9(3) VALUE 0.
        01  WS-MONTHLY-REVENUE      PIC 9(9)V99 VALUE 0.
 
-       *> Booking counters
-       01  WS-TOTAL-BOOKINGS       PIC 9(5) VALUE 0.
-       01  WS-CANCELLED-BOOKINGS   PIC 9(5) VALUE 0.
-       01  WS-COMPLETED-BOOKINGS   PIC 9(5) VALUE 0.
-       01  WS-ACTIVE-BOOKINGS      PIC 9(5) VALUE 0.
-
        *> Calculations
        01  WS-OCCUPANCY-RATE       PIC 9(3)V99.
        01  WS-OCCUPANCY-PERCENT    PIC 999V99.
-       01  WS-CANCELLATION-RATE    PIC 9(3)V99.
 
        *> Display fields
        01  WS-DISPLAY-CHECKINS     PIC Z(4)9.
@@ -88,23 +81,6 @@
        01  WS-DISPLAY-TOTAL        PIC ZZ9.
        01  WS-DISPLAY-OCCUPANCY    PIC ZZ9.99.
        01  WS-DISPLAY-REVENUE      PIC Z(8)9.99.
-       01  WS-DISPLAY-TOTAL-BOOK   PIC Z(4)9.
-       01  WS-DISPLAY-CANCELLED    PIC Z(4)9.
-       01  WS-DISPLAY-COMPLETED    PIC Z(4)9.
-       01  WS-DISPLAY-ACTIVE       PIC Z(4)9.
-       01  WS-DISPLAY-CANCEL-RATE  PIC ZZ9.99.
-
-       *> Color codes for display - ANSI escape sequences
-       01 RED-COLOR          PIC X(8) VALUE X"1B5B33316D".
-       01 GREEN-COLOR        PIC X(8) VALUE X"1B5B33326D".
-       01 RESET-COLOR        PIC X(4) VALUE X"1B5B306D".
-       01 BLUE-COLOR         PIC X(8) VALUE X"1B5B33346D".
-       01 YELLOW-COLOR       PIC X(8) VALUE X"1B5B33336D".
-       01 CYAN-COLOR         PIC X(8) VALUE X"1B5B33366D".
-
-       *> Screen formatting
-       01 CLEAR-SCREEN       PIC X(4) VALUE X"1B5B324A".
-       01 WS-DUMMY-INPUT     PIC X.
 
        *> Temporary fields
        01  WS-TOTAL-CHARGE-DEC     PIC 9(9)V99.
@@ -116,7 +92,6 @@
        MAIN-PROCEDURE.
            PERFORM GET-REPORT-DATE
            PERFORM COUNT-CHECKINOUT-FROM-CHINOUT
-           PERFORM COUNT-MONTHLY-BOOKINGS
            PERFORM CALCULATE-OCCUPANCY
            PERFORM CALCULATE-MONTHLY-REVENUE
            PERFORM DISPLAY-MONTHLY-SUMMARY-REPORT
@@ -151,64 +126,6 @@
            END-PERFORM
 
            CLOSE CHECKINOUT-FILE.
-
-       COUNT-MONTHLY-BOOKINGS.
-           OPEN INPUT BOOKING-FILE
-           IF WS-BOOKING-FILE-STATUS NOT = 00
-               DISPLAY "Error opening BOOKING file: "
-                       WS-BOOKING-FILE-STATUS
-               GOBACK
-           END-IF
-
-           MOVE 'N' TO WS-EOF
-           MOVE 0 TO WS-TOTAL-BOOKINGS
-           MOVE 0 TO WS-CANCELLED-BOOKINGS
-           MOVE 0 TO WS-COMPLETED-BOOKINGS
-           MOVE 0 TO WS-ACTIVE-BOOKINGS
-
-           PERFORM UNTIL WS-EOF = 'Y'
-               READ BOOKING-FILE NEXT RECORD
-               AT END
-                   MOVE 'Y' TO WS-EOF
-               NOT AT END
-                   PERFORM CHECK-BOOKING-MONTH
-               END-READ
-           END-PERFORM
-
-           CLOSE BOOKING-FILE
-
-           *> Calculate cancellation rate
-           IF WS-TOTAL-BOOKINGS > 0
-               COMPUTE WS-CANCELLATION-RATE =
-                   (WS-CANCELLED-BOOKINGS / WS-TOTAL-BOOKINGS) * 100
-           ELSE
-               MOVE 0 TO WS-CANCELLATION-RATE
-           END-IF.
-
-       CHECK-BOOKING-MONTH.
-           *> Convert CREATED-AT date (YYYYMMDD) to numeric for comparison
-           MOVE FUNCTION NUMVAL(CREATED-AT) TO WS-CHECKIN-DATE-NUM
-
-           *> Extract year and month from booking creation date
-           DIVIDE WS-CHECKIN-DATE-NUM BY 10000 GIVING WS-BOOKING-YEAR
-           COMPUTE WS-BOOKING-MONTH =
-               (WS-CHECKIN-DATE-NUM - (WS-BOOKING-YEAR * 10000)) / 100
-
-           *> Count bookings created in this month
-           IF WS-BOOKING-YEAR = WS-REPORT-YEAR AND
-              WS-BOOKING-MONTH = WS-REPORT-MONTH
-               ADD 1 TO WS-TOTAL-BOOKINGS
-
-               *> Count by status
-               EVALUATE FUNCTION TRIM(BOOKING-STATUS)
-                   WHEN 'Cancelled'
-                       ADD 1 TO WS-CANCELLED-BOOKINGS
-                   WHEN 'Completed'
-                       ADD 1 TO WS-COMPLETED-BOOKINGS
-                   WHEN 'Active'
-                       ADD 1 TO WS-ACTIVE-BOOKINGS
-               END-EVALUATE
-           END-IF.
 
        CHECK-MONTHLY-CHECKINOUT-DATES.
            *> Convert dates to numeric for comparison
@@ -319,54 +236,31 @@
            MOVE WS-TOTAL-ROOMS TO WS-DISPLAY-TOTAL
            MOVE WS-OCCUPANCY-RATE TO WS-DISPLAY-OCCUPANCY
            MOVE WS-MONTHLY-REVENUE TO WS-DISPLAY-REVENUE
-           MOVE WS-TOTAL-BOOKINGS TO WS-DISPLAY-TOTAL-BOOK
-           MOVE WS-CANCELLED-BOOKINGS TO WS-DISPLAY-CANCELLED
-           MOVE WS-COMPLETED-BOOKINGS TO WS-DISPLAY-COMPLETED
-           MOVE WS-ACTIVE-BOOKINGS TO WS-DISPLAY-ACTIVE
-           MOVE WS-CANCELLATION-RATE TO WS-DISPLAY-CANCEL-RATE
 
-           DISPLAY CLEAR-SCREEN
-           DISPLAY BLUE-COLOR
-           DISPLAY "==================================================="
-           "============================"
-           DISPLAY "                        MONTHLY SUMMARY REPORT SYS"
-           "TEM                        "
-           DISPLAY "==================================================="
-           "============================"
-           RESET-COLOR
-           DISPLAY "                                                   "
-           DISPLAY "                     Report Month: " WS-REPORT-MONTH "/" WS-REPORT-YEAR
-           DISPLAY "                                                   "
-           DISPLAY CYAN-COLOR "                     BOOKING STATISTICS:"
-           RESET-COLOR
-           DISPLAY "                       Total Bookings       : "
-           FUNCTION TRIM(WS-DISPLAY-TOTAL-BOOK)
-           DISPLAY "                       Completed Bookings   : "
-           FUNCTION TRIM(WS-DISPLAY-COMPLETED)
-           DISPLAY "                       Active Bookings      : "
-           FUNCTION TRIM(WS-DISPLAY-ACTIVE)
-           DISPLAY "                       Cancelled Bookings   : "
-           FUNCTION TRIM(WS-DISPLAY-CANCELLED)
-           DISPLAY "                       Cancellation Rate    : "
-           FUNCTION TRIM(WS-DISPLAY-CANCEL-RATE) "%"
-           DISPLAY "                                                   "
-           DISPLAY CYAN-COLOR "                     CHECK-IN/CHECK-OUT "
-           "ACTIVITY:" RESET-COLOR
-           DISPLAY "                       Check-ins This Month : "
+           DISPLAY " "
+           DISPLAY "=========================================="
+           DISPLAY "        MONTHLY SUMMARY REPORT"
+           DISPLAY "=========================================="
+           DISPLAY "Report Month: " WS-REPORT-MONTH "/" WS-REPORT-YEAR
+           DISPLAY " "
+           DISPLAY "CHECK-IN/CHECK-OUT ACTIVITY:"
+           DISPLAY "  Check-ins This Month : "
            FUNCTION TRIM(WS-DISPLAY-CHECKINS)
-           DISPLAY "                       Check-outs This Month: "
+           DISPLAY "  Check-outs This Month: "
            FUNCTION TRIM(WS-DISPLAY-CHECKOUTS)
-           DISPLAY "                                                   "
-           DISPLAY CYAN-COLOR "                     REVENUE:"
-           RESET-COLOR
-           DISPLAY "                       Monthly Revenue      : $"
+           DISPLAY " "
+           DISPLAY "ROOM OCCUPANCY:"
+           DISPLAY "  Occupied Rooms       : "
+           FUNCTION TRIM(WS-DISPLAY-OCCUPIED)
+           DISPLAY "  Total Rooms          : "
+           FUNCTION TRIM(WS-DISPLAY-TOTAL)
+           DISPLAY "  Occupancy Rate       : "
+           FUNCTION TRIM(WS-DISPLAY-OCCUPANCY) "%"
+           DISPLAY " "
+           DISPLAY "REVENUE:"
+           DISPLAY "  Monthly Revenue      : $"
            FUNCTION TRIM(WS-DISPLAY-REVENUE)
-           DISPLAY "                                                   "
-           DISPLAY "==================================================="
-           "============================"
-           DISPLAY "                                                   "
-           DISPLAY "Press ENTER to continue...    "
-
-           ACCEPT WS-DUMMY-INPUT.
+           DISPLAY "=========================================="
+           DISPLAY " ".
 
        END PROGRAM monthlyReport.

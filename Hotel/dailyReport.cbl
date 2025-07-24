@@ -6,7 +6,7 @@
       * Tectonics: cobc
       ******************************************************************
        IDENTIFICATION DIVISION.
-       PROGRAM-ID. dailySummaryReport.
+       PROGRAM-ID. dailyReport.
 
        ENVIRONMENT DIVISION.
        INPUT-OUTPUT SECTION.
@@ -26,6 +26,11 @@
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS INVOICE-ID.
 
+           SELECT CHECKINOUT-FILE ASSIGN TO '../DATA/CHECKINOUT.DAT'
+               ORGANIZATION IS INDEXED
+               ACCESS MODE IS DYNAMIC
+               RECORD KEY IS CHECKIN-ID.
+
        DATA DIVISION.
        FILE SECTION.
        FD  BOOKING-FILE.
@@ -37,10 +42,14 @@
        FD  INVOICES-FILE.
        COPY "./CopyBooks/INVOICES.cpy".
 
+       FD  CHECKINOUT-FILE.
+       COPY "./CopyBooks/CHECKINOUT.cpy".
+
        WORKING-STORAGE SECTION.
        01  WS-BOOKING-FILE-STATUS  PIC 99.
        01  WS-ROOMS-FILE-STATUS    PIC 99.
        01  WS-INVOICE-FILE-STATUS  PIC 99.
+       01  WS-CHECKINOUT-FILE-STATUS PIC 99.
        01  WS-EOF                  PIC X VALUE 'N'.
 
        01  WS-REPORT-DATE.
@@ -78,7 +87,6 @@
        01 LINK PIC 9.
 
        PROCEDURE DIVISION USING LINK.
-       MAIN-PROCEDURE.
            PERFORM GET-REPORT-DATE
            PERFORM COUNT-CHECKINS-CHECKOUTS
            PERFORM CALCULATE-OCCUPANCY
@@ -90,10 +98,10 @@
            ACCEPT WS-REPORT-DATE FROM DATE YYYYMMDD.
 
        COUNT-CHECKINS-CHECKOUTS.
-           OPEN INPUT BOOKING-FILE
-           IF WS-BOOKING-FILE-STATUS NOT = 00
-               DISPLAY "Error opening BOOKING file: "
-                       WS-BOOKING-FILE-STATUS
+           OPEN INPUT CHECKINOUT-FILE
+           IF WS-CHECKINOUT-FILE-STATUS NOT = 00
+               DISPLAY "Error opening CHECKINOUT file: "
+                       WS-CHECKINOUT-FILE-STATUS
                GOBACK
            END-IF
 
@@ -102,24 +110,23 @@
            MOVE 0 TO WS-CHECKOUTS-TODAY
 
            PERFORM UNTIL WS-EOF = 'Y'
-               READ BOOKING-FILE NEXT RECORD
+               READ CHECKINOUT-FILE NEXT RECORD
                AT END
                    MOVE 'Y' TO WS-EOF
                NOT AT END
-                   PERFORM CHECK-BOOKING-DATES
+                   PERFORM CHECK-CHECKINOUT-DATES
                END-READ
            END-PERFORM
 
-           CLOSE BOOKING-FILE.
+           CLOSE CHECKINOUT-FILE.
 
-       CHECK-BOOKING-DATES.
+       CHECK-CHECKINOUT-DATES.
            *> Convert dates to numeric for comparison
-           MOVE CHECKIN-DATE TO WS-CHECKIN-DATE
+           MOVE ACTUAL-CHECKIN-DATE TO WS-CHECKIN-DATE
            MOVE CHECKOUT-DATE TO WS-CHECKOUT-DATE
 
            *> Count check-ins today
-           IF WS-CHECKIN-DATE = WS-REPORT-DATE AND
-              CHEKIN-FLAG = 'Y'
+           IF WS-CHECKIN-DATE = WS-REPORT-DATE
                ADD 1 TO WS-CHECKINS-TODAY
            END-IF
 
@@ -196,10 +203,9 @@
            *> Only process completed bookings
            IF BOOKING-STATUS = "Completed"
                MOVE CHECKIN-DATE TO WS-CHECKIN-DATE
-               MOVE CHECKOUT-DATE TO WS-CHECKOUT-DATE
 
-               *> Include revenue if guest was staying on report date
-               IF WS-CHECKOUT-DATE = WS-REPORT-DATE
+               *> Include revenue for bookings that checked in on or before report date
+               IF WS-CHECKIN-DATE <= WS-REPORT-DATE
                    PERFORM GET-INVOICE-REVENUE
                END-IF
            END-IF.
@@ -263,9 +269,9 @@
            FUNCTION TRIM(WS-DISPLAY-OCCUPANCY) "%"
            DISPLAY " "
            DISPLAY "REVENUE:"
-           DISPLAY " Today's Revenue  : "
+           DISPLAY "  Daily Revenue   : "
            FUNCTION TRIM(WS-DISPLAY-REVENUE)
            DISPLAY "=========================================="
            DISPLAY " ".
 
-       END PROGRAM dailySummaryReport.
+       END PROGRAM dailyReport.
