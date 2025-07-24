@@ -1,4 +1,10 @@
-
+      ******************************************************************
+      * Author: Kaung Myat Htun
+      * Date: 2025-07-18
+      * Purpose: Daily Summary Report - Check-ins, Check-outs,
+      *          Occupancy Rate, and Revenue
+      * Tectonics: cobc
+      ******************************************************************
        IDENTIFICATION DIVISION.
        PROGRAM-ID. dailySummaryReport.
 
@@ -36,7 +42,6 @@
        01  WS-ROOMS-FILE-STATUS    PIC 99.
        01  WS-INVOICE-FILE-STATUS  PIC 99.
        01  WS-EOF                  PIC X VALUE 'N'.
-       01  WS-ANY-KEY              PIC X.
 
        01  WS-REPORT-DATE.
            05 WS-REPORT-YEAR       PIC 9(4).
@@ -237,9 +242,9 @@
            MOVE WS-DAILY-REVENUE TO WS-DISPLAY-REVENUE
 
            DISPLAY " "
-           DISPLAY "=================================================="
+           DISPLAY "=========================================="
            DISPLAY "         DAILY SUMMARY REPORT"
-           DISPLAY "=================================================="
+           DISPLAY "=========================================="
            DISPLAY "Report Date: " WS-REPORT-YEAR "/"
                    WS-REPORT-MONTH "/" WS-REPORT-DAY
            DISPLAY " "
@@ -260,9 +265,7 @@
            DISPLAY "REVENUE:"
            DISPLAY " Today's Revenue  : "
            FUNCTION TRIM(WS-DISPLAY-REVENUE)
-           DISPLAY "=================================================="
-           DISPLAY " "
-           DISPLAY "Press any key to return to main menu..."
-           ACCEPT WS-ANY-KEY.
+           DISPLAY "=========================================="
+           DISPLAY " ".
 
        END PROGRAM dailySummaryReport.

@@ -26,10 +26,17 @@
        01  WS-PRICE-DISPLAY           PIC $$,$$$,$$9.
        01  WS-FORMATTED-DATE          PIC X(10).
 
-       *> Color codes for display
+       *> Color codes for display - ANSI escape sequences
        01 RED-COLOR          PIC X(8) VALUE X"1B5B33316D".
        01 GREEN-COLOR        PIC X(8) VALUE X"1B5B33326D".
        01 RESET-COLOR        PIC X(4) VALUE X"1B5B306D".
+       01 BLUE-COLOR         PIC X(8) VALUE X"1B5B33346D".
+       01 YELLOW-COLOR       PIC X(8) VALUE X"1B5B33336D".
+       01 CYAN-COLOR         PIC X(8) VALUE X"1B5B33366D".
+
+       *> Screen formatting
+       01 CLEAR-SCREEN       PIC X(4) VALUE X"1B5B324A".
+       01 WS-DUMMY-INPUT     PIC X.
 
        01  WS-HEADER-1.
            05 FILLER               PIC X(7) VALUE 'INVOICE'.
@@ -84,18 +91,27 @@
 
        MAIN-LOOP.
            PERFORM UNTIL MENU-CHOICE = 9
-           DISPLAY " "
-           DISPLAY
-           "**************************************************"
-           DISPLAY "                View Hotel Invoices"
-           DISPLAY
-           "**************************************************"
-           DISPLAY "1. View All Invoices"
-           DISPLAY "2. Search Invoice by Invoice ID"
-           DISPLAY "3. Search Invoice by Booking ID"
-           DISPLAY "9. Go Back"
-           DISPLAY
-           "**************************************************"
+           DISPLAY CLEAR-SCREEN
+           DISPLAY BLUE-COLOR
+           DISPLAY "==============================================="
+           "================================"
+           DISPLAY "                         VIEW HOTEL INVOICES  "
+           "                               "
+           DISPLAY "==============================================="
+           "================================"
+           RESET-COLOR
+           DISPLAY "                                               "
+           DISPLAY "                        1. View All Invoices  "
+           "                               "
+           DISPLAY "                        2. Search Invoice by I"
+           "nvoice ID                      "
+           DISPLAY "                        3. Search Invoice by B"
+           "ooking ID                      "
+           DISPLAY "                        9. Return to Main Menu"
+           "                               "
+           DISPLAY "                                               "
+           DISPLAY "==============================================="
+           "================================"
            ACCEPT MENU-CHOICE
            EVALUATE MENU-CHOICE
                WHEN 1 PERFORM ALL-INVOICES-DSP
@@ -103,7 +119,12 @@
                WHEN 3 PERFORM SEARCH-BY-BOOKING-ID
                WHEN 9 GOBACK
                WHEN OTHER
-                   DISPLAY RED-COLOR "Invalid selection." RESET-COLOR
+                   DISPLAY " "
+                   DISPLAY RED-COLOR "*** ERROR: Invalid selection. P"
+                   "lease choose 1-3 or 9. ***" RESET-COLOR
+                   DISPLAY " "
+                   DISPLAY "Press ENTER to continue..."
+                   ACCEPT WS-DUMMY-INPUT
            END-EVALUATE
            END-PERFORM.
            GOBACK.
@@ -112,64 +133,98 @@
            MOVE 0 TO WS-INVOICE-COUNTER
            MOVE 0 TO WS-TOTAL-AMOUNT
            MOVE 'N' TO WS-EOF
+           DISPLAY CLEAR-SCREEN
+           DISPLAY CYAN-COLOR
+           DISPLAY "==============================================="
+           "================================"
+           DISPLAY "                         ALL INVOICES REPORT  "
+           "                               "
+           DISPLAY "==============================================="
+           "================================"
+           RESET-COLOR
+           DISPLAY " "
+
            PERFORM OPEN-FILES
            IF WS-INVOICE-FILE-STATUS = '00'
                OR WS-INVOICE-FILE-STATUS = '97'
-               DISPLAY " "
-               DISPLAY "ALL INVOICES"
-               DISPLAY "============"
                PERFORM DISPLAY-HEADERS
                PERFORM READ-AND-DISPLAY-ALL UNTIL WS-EOF = 'Y'
                PERFORM DISPLAY-SUMMARY
            ELSE
-               DISPLAY
+               DISPLAY RED-COLOR
                "Error opening invoice file or no invoices found."
+               RESET-COLOR
+               DISPLAY " "
+               DISPLAY "Press ENTER to continue..."
+               ACCEPT WS-DUMMY-INPUT
            END-IF
            PERFORM CLOSE-FILES.
 
        SEARCH-BY-INVOICE-ID.
+           DISPLAY CLEAR-SCREEN
+           DISPLAY YELLOW-COLOR
+           DISPLAY "==============================================="
+           "================================"
+           DISPLAY "                       SEARCH BY INVOICE ID   "
+           "                               "
+           DISPLAY "==============================================="
+           "================================"
+           RESET-COLOR
            DISPLAY " "
-           DISPLAY "SEARCH BY INVOICE ID"
-           DISPLAY "=================================================="
            DISPLAY "Enter Invoice ID: "
            ACCEPT WS-SEARCH-INVOICE
 
            MOVE 0 TO WS-INVOICE-COUNTER
            MOVE 'N' TO WS-EOF
+           DISPLAY " "
            PERFORM OPEN-FILES
            IF WS-INVOICE-FILE-STATUS = '00'
                OR WS-INVOICE-FILE-STATUS = '97'
                MOVE WS-SEARCH-INVOICE TO INVOICE-ID
                READ INVOICE-FILE KEY IS INVOICE-ID
                    INVALID KEY
-                       DISPLAY "Invoice ID "
-                       WS-SEARCH-INVOICE " not found."
+                       DISPLAY RED-COLOR "Invoice ID "
+                       WS-SEARCH-INVOICE " not found." RESET-COLOR
+                       DISPLAY " "
+                       DISPLAY "Press ENTER to continue..."
+                       ACCEPT WS-DUMMY-INPUT
                    NOT INVALID KEY
                        PERFORM DISPLAY-HEADERS
                        PERFORM DISPLAY-INVOICE-RECORD
                        ADD 1 TO WS-INVOICE-COUNTER
+                       PERFORM DISPLAY-SUMMARY
                END-READ
            ELSE
-               DISPLAY "Error opening invoice file."
+               DISPLAY RED-COLOR "Error opening invoice file."
+               RESET-COLOR
+               DISPLAY " "
+               DISPLAY "Press ENTER to continue..."
+               ACCEPT WS-DUMMY-INPUT
            END-IF
            PERFORM CLOSE-FILES.
 
        SEARCH-BY-BOOKING-ID.
+           DISPLAY CLEAR-SCREEN
+           DISPLAY YELLOW-COLOR
+           DISPLAY "==============================================="
+           "================================"
+           DISPLAY "                       SEARCH BY BOOKING ID   "
+           "                               "
+           DISPLAY "==============================================="
+           "================================"
+           RESET-COLOR
            DISPLAY " "
-           DISPLAY "SEARCH BY BOOKING ID"
-           DISPLAY "=================================================="
            DISPLAY "Enter Booking ID: "
            ACCEPT WS-SEARCH-BOOKING
 
            MOVE 0 TO WS-INVOICE-COUNTER
            MOVE 'N' TO WS-EOF
+           DISPLAY " "
            PERFORM OPEN-FILES
            IF WS-INVOICE-FILE-STATUS = '00'
                OR WS-INVOICE-FILE-STATUS = '97'
-               DISPLAY " "
-               DISPLAY "INVOICES FOR BOOKING ID: "
-               WS-SEARCH-BOOKING
-            DISPLAY "=================================================="
+               DISPLAY CYAN-COLOR "INVOICES FOR BOOKING ID: "
+               WS-SEARCH-BOOKING RESET-COLOR
                PERFORM DISPLAY-HEADERS
               MOVE 0 TO INVOICE-ID
               *>START INVOICE-FILE KEY IS NOT LESS THAN INVOICE-ID
@@ -191,11 +246,21 @@
                END-PERFORM
 
                IF WS-INVOICE-COUNTER = 0
-                   DISPLAY "No record found for Booking ID "
-                   WS-SEARCH-BOOKING
+                   DISPLAY " "
+                   DISPLAY RED-COLOR "No record found for Booking ID "
+                   WS-SEARCH-BOOKING RESET-COLOR
+                   DISPLAY " "
+                   DISPLAY "Press ENTER to continue..."
+                   ACCEPT WS-DUMMY-INPUT
+               ELSE
+                   PERFORM DISPLAY-SUMMARY
                END-IF
            ELSE
-               DISPLAY "Error opening invoice file."
+               DISPLAY RED-COLOR "Error opening invoice file."
+               RESET-COLOR
+               DISPLAY " "
+               DISPLAY "Press ENTER to continue..."
+               ACCEPT WS-DUMMY-INPUT
            END-IF
            PERFORM CLOSE-FILES.
 
@@ -206,8 +271,10 @@
            CLOSE INVOICE-FILE.
 
        DISPLAY-HEADERS.
+           DISPLAY YELLOW-COLOR
            DISPLAY WS-HEADER-1
-           DISPLAY WS-HEADER-2.
+           DISPLAY WS-HEADER-2
+           RESET-COLOR.
 
        READ-AND-DISPLAY-ALL.
            *> Always start from the lowest possible key to avoid duplicates or missing records
@@ -247,14 +314,22 @@
 
        DISPLAY-SUMMARY.
            DISPLAY " "
+           DISPLAY "==============================================="
+           "================================"
            IF WS-INVOICE-COUNTER = 0
-               DISPLAY "No invoices found."
+               DISPLAY RED-COLOR "No invoices found." RESET-COLOR
            ELSE
-               DISPLAY "Total Invoices: " WS-INVOICE-COUNTER
+               DISPLAY GREEN-COLOR "Total Invoices Found: "
+               WS-INVOICE-COUNTER RESET-COLOR
                MOVE WS-TOTAL-AMOUNT TO WS-PRICE-DISPLAY
-               DISPLAY "Total Amount: " WS-PRICE-DISPLAY
+               DISPLAY GREEN-COLOR "Total Amount: " WS-PRICE-DISPLAY
+               RESET-COLOR
            END-IF
-           DISPLAY " ".
+           DISPLAY "==============================================="
+           "================================"
+           DISPLAY " "
+           DISPLAY "Press ENTER to continue..."
+           ACCEPT WS-DUMMY-INPUT.
 
        FORMAT-DATE.
            *> Convert YYYYMMDD to YYYY/MM/DD format

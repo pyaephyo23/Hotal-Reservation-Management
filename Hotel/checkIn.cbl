@@ -1,4 +1,4 @@
-       IDENTIFICATION DIVISION.
+        IDENTIFICATION DIVISION.
        PROGRAM-ID. checkIn.
        ENVIRONMENT DIVISION.
        INPUT-OUTPUT SECTION.
@@ -7,453 +7,1073 @@
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS ROOM-ID.
-           SELECT CUSTOMER-FILE ASSIGN TO '../DATA/CUSTOMERS.DAT'
-               ORGANIZATION IS INDEXED
-               ACCESS MODE IS DYNAMIC
-               RECORD KEY IS CUSTOMER-ID
-               ALTERNATE RECORD KEY IS CUSTOMER-NAME WITH DUPLICATES.
            SELECT BOOKING-FILE ASSIGN TO '../DATA/BOOKINGS.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS BOOKING-ID.
-           SELECT GUEST-FILE ASSIGN TO '../DATA/GUESTS.DAT'
+           SELECT CUSTOMER-FILE ASSIGN TO '../DATA/CUSTOMERS.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
-               RECORD KEY IS GUEST-ID.
-       DATA DIVISION.
+               RECORD KEY IS CUSTOMER-ID.
+           SELECT STAYLOG-FILE ASSIGN TO '../DATA/STAYLOG.DAT'
+               ORGANIZATION IS INDEXED
+               ACCESS MODE IS DYNAMIC
+               RECORD KEY IS STAYLOG-ID.
+           SELECT CHECKINOUT-FILE ASSIGN TO '../DATA/CHECKINOUT.DAT'
+               ORGANIZATION IS INDEXED
+               ACCESS MODE IS DYNAMIC
+               RECORD KEY IS CHECKIN-ID.
 
+       DATA DIVISION.
        FILE SECTION.
        FD  ROOMS-FILE.
        COPY "./CopyBooks/ROOMS.cpy".
 
-       FD CUSTOMER-FILE.
-       COPY "./CopyBooks/CUSTOMERS.cpy".
-
        FD  BOOKING-FILE.
        COPY "./CopyBooks/BOOKINGS.cpy".
 
-       FD  GUEST-FILE.
-       COPY "./CopyBooks/GUESTS.cpy".
+       FD  CUSTOMER-FILE.
+       COPY "./CopyBooks/CUSTOMERS.cpy".
+
+       FD  STAYLOG-FILE.
+       COPY "./CopyBooks/STAYLOG.cpy".
+
+       FD  CHECKINOUT-FILE.
+       COPY "./CopyBooks/CHECKINOUT.cpy".
 
        WORKING-STORAGE SECTION.
-       01 WS-CHOICE            PIC 9.
-       01 WS-BOOKING-ID        PIC 9(5).
-       01 WS-CUSTOMER-ID       PIC 9(5).
-       01 WS-CUSTOMER-PHONE    PIC X(15).
-       01 WS-CUSTOMER-NAME     PIC X(30).
-       01 WS-ROOM-ID           PIC X(5).
-       01 WS-ROOM-TYPE         PIC X(10).
-       01 WS-CHECKOUT-DATE     PIC 9(8).
-       01 WS-FOUND             PIC X VALUE 'N'.
-       01 WS-EOF               PIC X VALUE 'N'.
-       01 WS-CHECKIN-DATE      PIC X(8).
-       01 WS-CURRENT-DATE      PIC 9(8).
-       01 WS-TIME-FORMATTED    PIC X(6).
-       01 WS-CURRENT-TIME-FIELDS.
-           05 WS-CURRENT-HOUR    PIC 9(2).
-           05 WS-CURRENT-MINUTE  PIC 9(2).
-           05 WS-CURRENT-SECOND  PIC 9(2).
-       01 WS-BOOKING-COUNT     PIC 9(2) VALUE 0.
-       01 WS-BOOKING-CHOICE    PIC 9(2).
-       01 WS-ID-FOUND          PIC X VALUE 'N'.
-       01 WS-EXIST-CHOICE      PIC X.
-       01 WS-BOOKING-ENTRY OCCURS 20 TIMES.
-           05 WS-FOUND-BOOKING-ID   PIC 9(5).
-           05 WS-FOUND-ROOM-ID      PIC X(5).
-           05 WS-FOUND-CHECKIN-DATE PIC 9(8).
-           05 WS-FOUND-CHECKOUT-DATE PIC 9(8).
-       01 WS-AVAILABLE-COUNT   PIC 9(2) VALUE ZEROS.
-       01 WS-ROOM-CHOICE       PIC 9(2).
-       01 WS-ROOM-ENTRY OCCURS 20 TIMES.
-           05 WS-AVAILABLE-ROOM-ID   PIC X(5).
-           05 WS-AVAILABLE-ROOM-TYPE PIC X(10).
-           05 WS-AVAILABLE-ROOM-PRICE PIC 9(9).
-       01 WS-CREATED-AT-TIMESTAMP PIC X(14).
-       01 WS-GUEST-ID          PIC 9(5).
-       01 WS-GUEST-NAME        PIC X(20).
-       01 WS-GUEST-AGE         PIC 9(3).
-       01 WS-GUEST-NRC         PIC X(18).
-       01 WS-GUEST-GENDER      PIC X(1).
-       01 WS-GUEST-COUNT       PIC 9(2) VALUE ZEROS.
-       01 WS-ADD-GUESTS        PIC X VALUE 'N'.
-       01 WS-FORMATTED-PRICE   PIC ZZZZZZZZ9.
-       01 WS-CURRENT-DATE-DATA.
-           05 WS-CURRENT-DATE-PART.
-               10 WS-CURRENT-YEAR     PIC 9(4).
-               10 WS-CURRENT-MONTH    PIC 9(2).
-               10 WS-CURRENT-DAY      PIC 9(2).
-           05 WS-CURRENT-TIME-PART.
-               10 WS-CURRENT-HOURS    PIC 9(2).
-               10 WS-CURRENT-MINUTES  PIC 9(2).
-               10 WS-CURRENT-SECONDS  PIC 9(2).
+       *> Navigation and control variables
+       01 WS-CHOICE                  PIC 9.
+       01 WS-FOUND                   PIC X VALUE 'N'.
+       01 WS-CONFIRMATION            PIC X.
+       01 WS-CONFIRM-INFO            PIC X.
+       01 WS-EOF                     PIC X VALUE 'N'.
+       01 WS-UPDATE-CHOICE           PIC X.
 
-       *> Color codes for display
+       *> Booking information
+       01 WS-CUSTOMER-PHONE          PIC X(15).
+       01 WS-ROOM-NUMBER             PIC X(5).
+       01 WS-ROOM-TYPE               PIC X(10).
+       01 WS-DATE-DISPLAY            PIC X(8).
+
+       *> Customer count information
+       01 WS-CUSTOMER-COUNT          PIC 9.
+       01 WS-MAX-CUSTOMERS           PIC 9.
+       01 WS-CURRENT-CUSTOMER        PIC 9.
+
+       *> Time and date handling
+       01 WS-CURRENT-DATE            PIC 9(8).
+       01 WS-CURRENT-TIMESTAMP       PIC 9(14).
+       01 WS-TIME-FORMATTED          PIC X(6).
+       01 WS-CURRENT-TIME-FIELDS.
+           05 WS-CURRENT-HOUR        PIC 9(2).
+           05 WS-CURRENT-MINUTE      PIC 9(2).
+           05 WS-CURRENT-SECOND      PIC 9(2).
+
+       *> ID tracking variables
+       01 WS-NEXT-CHECKIN-ID         PIC 9(5) VALUE 0.
+       01 WS-NEXT-CUSTOMER-ID        PIC 9(5) VALUE 0.
+       01 WS-NEXT-STAYLOG-ID         PIC 9(5) VALUE 0.
+       01 WS-EXISTING-CUSTOMER       PIC X VALUE 'N'.
+       01 WS-EXISTING-CUSTOMER-ID    PIC 9(5) VALUE 0.
+
+       *> Guest information storage for all customers
+       01 WS-GUEST-ARRAY.
+           05 WS-GUEST-INFO OCCURS 9 TIMES INDEXED BY WS-GUEST-IDX.
+               10 WS-GUEST-NAME-T    PIC X(20).
+               10 WS-GUEST-PHONE-T   PIC X(15).
+               10 WS-GUEST-AGE-T     PIC 9(3).
+               10 WS-GUEST-GENDER-T  PIC X(1).
+               10 WS-GUEST-NRC-T     PIC X(25).
+               10 WS-GUEST-CHOICE    PIC X.
+               10 WS-GUEST-CUST-ID   PIC 9(5).
+
+       *> Working variables for current guest
+       01 WS-CURRENT-GUEST.
+           05 WS-GUEST-NAME          PIC X(20).
+           05 WS-GUEST-PHONE         PIC X(15).
+           05 WS-GUEST-AGE           PIC 9(3).
+           05 WS-GUEST-GENDER        PIC X(1).
+           05 WS-GUEST-NRC           PIC X(25).
+
+       *> General error handling
+       01 WS-ERROR-MESSAGE           PIC X(80).
+
+       *> Validation variables
+       01 WS-VALIDATION-PASSED       PIC X VALUE 'N'.
+       01 WS-INPUT-VALID             PIC X VALUE 'N'.
+       01 WS-TEMP-INPUT              PIC X(25).
+       01 WS-CHAR-CHECK              PIC X.
+       01 WS-CHAR-COUNT              PIC 9(3).
+       01 WS-LOOP-COUNTER            PIC 9(3).
+       01 WS-ROOM-COUNT-DSP              PIC ZZZ.
+
+       *> Display formatting variables
+       01 WS-GUEST-NUMBER            PIC 9.
+
+       *> Walk-in check-in variables
+       01 WS-SELECTED-ROOM-TYPE      PIC X(10).
+       01 WS-AVAILABLE-ROOMS         PIC 9(3) VALUE 0.
+       01 WS-ROOM-CHOICE             PIC X(5).
+       01 WS-ROOM-DISPLAY-COUNT      PIC 9(3) VALUE 0.
+       01 WS-ROOM-SELECTION          PIC 9(3).
+       01 WS-ROOM-COUNTER            PIC 9(3) VALUE 0.
+
+       *> Room array for selection
+       01 WS-ROOM-ARRAY.
+           05 WS-ROOM-LIST OCCURS 50 TIMES.
+               10 WS-ROOM-ID-ARRAY   PIC X(5).
+               10 WS-ROOM-TYPE-ARRAY PIC X(10).
+               10 WS-ROOM-PRICE-ARRAY PIC $(9).
+
+       *> Color codes for display - ANSI escape sequences
        01 RED-COLOR          PIC X(8) VALUE X"1B5B33316D".
        01 GREEN-COLOR        PIC X(8) VALUE X"1B5B33326D".
        01 RESET-COLOR        PIC X(4) VALUE X"1B5B306D".
+       01 BLUE-COLOR         PIC X(8) VALUE X"1B5B33346D".
+       01 YELLOW-COLOR       PIC X(8) VALUE X"1B5B33336D".
+       01 CYAN-COLOR         PIC X(8) VALUE X"1B5B33366D".
+
+       *> Screen formatting
+       01 CLEAR-SCREEN       PIC X(4) VALUE X"1B5B324A".
+       01 WS-DUMMY-INPUT     PIC X.
+
        LINKAGE SECTION.
        01 LINK PIC 9.
 
        PROCEDURE DIVISION USING LINK.
        MAIN-PROCEDURE.
-           DISPLAY "***************************************************"
-           DISPLAY "1. Check In by Booking ID"
-           DISPLAY "2. Check In by Phone Number"
-           DISPLAY "3. Walk-in Check In"
-           DISPLAY "9. Return to Main Menu"
-           DISPLAY "***************************************************"
+           DISPLAY CLEAR-SCREEN
+           DISPLAY BLUE-COLOR
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                           GUEST CHECK-IN SYSTEM   "
+           DISPLAY "==================================================="
+           "============================"
+           RESET-COLOR
+           DISPLAY "                                                   "
+           DISPLAY "                              1. Check In          "
+           DISPLAY "                              2. Walk-in Check In  "
+           DISPLAY "                              9. Go Back           "
+           DISPLAY "                                                   "
+           DISPLAY "==================================================="
+           "============================"
            ACCEPT WS-CHOICE
            EVALUATE WS-CHOICE
                WHEN 1
-                   DISPLAY "Please enter your Booking ID:"
-                   ACCEPT WS-BOOKING-ID
-                   PERFORM CHECK-BOOKING-ID-AND-CHECK-IN
-                   PERFORM CHANGE-ROOM-STATUS
+                   PERFORM CHECK-IN-PROCESS
                    GO TO MAIN-PROCEDURE
                WHEN 2
-                   DISPLAY "Please enter your phone number:"
-                   ACCEPT WS-CUSTOMER-PHONE
-                   DISPLAY " "
-                   PERFORM CHECK-IN-BY-PHONE
-                   GO TO MAIN-PROCEDURE
-               WHEN 3
-                   PERFORM WALK-IN-CHECK-IN
+                   PERFORM WALKIN-CHECK-IN-PROCESS
                    GO TO MAIN-PROCEDURE
                WHEN 9
                    GOBACK
                WHEN OTHER
-                   DISPLAY RED-COLOR "Invalid selection. " RESET-COLOR
+                   DISPLAY " "
+                   DISPLAY RED-COLOR "*** ERROR: Invalid selection. Ple"
+                   "ase choose 1, 2, or 9. ***" RESET-COLOR
+                   DISPLAY " "
+                   DISPLAY "Press ENTER to continue..."
+                   ACCEPT WS-DUMMY-INPUT
                    GO TO MAIN-PROCEDURE
            END-EVALUATE.
-           STOP RUN.
 
-       CHECK-BOOKING-ID-AND-CHECK-IN.
-           MOVE 'N' TO WS-FOUND.
-           OPEN I-O BOOKING-FILE.
+      *****************************************************************
+      * CHECK-IN MAIN PROCESS
+      *****************************************************************
+       CHECK-IN-PROCESS.
+           PERFORM GET-BOOKING-DETAILS
+           IF WS-FOUND = 'Y'
+               PERFORM CONFIRM-CHECK-IN
+               IF WS-FOUND = 'Y'
+                   PERFORM EXECUTE-CHECK-IN
+               END-IF
+           END-IF.
 
-           *> Get the current system date
-           ACCEPT WS-CURRENT-DATE FROM DATE YYYYMMDD.
+      *****************************************************************
+      * STEP 1: GET BOOKING DETAILS
+      *****************************************************************
+       GET-BOOKING-DETAILS.
+           DISPLAY CLEAR-SCREEN
+           DISPLAY CYAN-COLOR
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                        BOOKING VERIFICATION       "
+           DISPLAY "==================================================="
+           "============================"
+           RESET-COLOR
+           DISPLAY "                                                   "
+           DISPLAY "           Please provide booking details for verif"
+           "ication                    "
+           DISPLAY "                                                   "
 
-            *> Get the current system time
-           ACCEPT WS-CURRENT-TIME-FIELDS FROM TIME.
+           *> Accept booker phone number
+           DISPLAY "Enter Booker Phone Number: "
+           ACCEPT WS-CUSTOMER-PHONE
+
+           *> Accept room number
+           DISPLAY "Enter Room Number: "
+           ACCEPT WS-ROOM-NUMBER
+
+           *> Search for active booking using phone and room
+           PERFORM FIND-ACTIVE-BOOKING
+           IF WS-FOUND = 'N'
+               DISPLAY " "
+               DISPLAY RED-COLOR "No active booking found for phone: "
+                       FUNCTION TRIM(WS-CUSTOMER-PHONE)
+                       " and room: " WS-ROOM-NUMBER RESET-COLOR
+               DISPLAY " "
+               DISPLAY "Press ENTER to continue..."
+               ACCEPT WS-DUMMY-INPUT
+           END-IF.
+
+       FIND-ACTIVE-BOOKING.
+           MOVE 'N' TO WS-FOUND
+           MOVE 'N' TO WS-EOF
+
+           OPEN I-O BOOKING-FILE
+           PERFORM UNTIL WS-EOF = 'Y'
+               READ BOOKING-FILE NEXT
+                   AT END
+                       MOVE 'Y' TO WS-EOF
+                   NOT AT END
+                       IF FUNCTION TRIM(CUSTOMER-PH-BK) =
+                          FUNCTION TRIM(WS-CUSTOMER-PHONE)
+                         AND FUNCTION TRIM(ROOM-ID-BK) =
+                             FUNCTION TRIM(WS-ROOM-NUMBER)
+                         AND FUNCTION TRIM(BOOKING-STATUS) = 'Active'
+                           MOVE 'Y' TO WS-FOUND
+                           *> Get room type from rooms file
+                           PERFORM GET-ROOM-TYPE
+                           PERFORM DISPLAY-BOOKING-INFO
+                           MOVE 'Y' TO WS-EOF
+                       END-IF
+               END-READ
+           END-PERFORM
+
+           IF WS-FOUND = 'N'
+               CLOSE BOOKING-FILE
+           END-IF.
+
+       GET-ROOM-TYPE.
+           OPEN INPUT ROOMS-FILE
+           MOVE ROOM-ID-BK TO ROOM-ID
+           READ ROOMS-FILE KEY IS ROOM-ID
+               INVALID KEY
+                   MOVE "Unknown" TO WS-ROOM-TYPE
+               NOT INVALID KEY
+                   MOVE ROOM-TYPE TO WS-ROOM-TYPE
+           END-READ
+           CLOSE ROOMS-FILE.
+
+       DISPLAY-BOOKING-INFO.
+           DISPLAY CLEAR-SCREEN
+           DISPLAY GREEN-COLOR
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                        BOOKING FOUND              "
+           DISPLAY "==================================================="
+           "============================"
+           RESET-COLOR
+           DISPLAY "                                                   "
+           DISPLAY "  Booking ID:       " BOOKING-ID
+           DISPLAY "  Customer:         " CUSTOMER-NAME-BK
+           DISPLAY "  Phone:            " CUSTOMER-PH-BK
+           DISPLAY "  Room:             " ROOM-ID-BK " (" WS-ROOM-TYPE
+           ")"
+           MOVE CHECKIN-DATE TO WS-DATE-DISPLAY
+           DISPLAY "  Check-in Date:    "
+           WS-DATE-DISPLAY(1:4) "/"
+           WS-DATE-DISPLAY(5:2) "/" WS-DATE-DISPLAY(7:2)
+           DISPLAY "                                                   "
+           DISPLAY "==================================================="
+           "============================".
+
+      *****************************************************************
+      * STEP 2: CONFIRM CHECK-IN AND COLLECT GUEST INFORMATION
+      *****************************************************************
+       CONFIRM-CHECK-IN.
+           DISPLAY CLEAR-SCREEN
+           DISPLAY YELLOW-COLOR
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                         CHECK-IN CONFIRMATION     "
+           DISPLAY "==================================================="
+           "============================"
+           RESET-COLOR
+           DISPLAY "                                                   "
+           DISPLAY "Proceed with check-in? (Y/N): "
+           ACCEPT WS-CONFIRMATION
+
+           IF WS-CONFIRMATION = 'Y' OR WS-CONFIRMATION = 'y'
+               MOVE 'Y' TO WS-FOUND
+               DISPLAY " "
+               DISPLAY GREEN-COLOR "Check-in confirmed." RESET-COLOR
+               DISPLAY " "
+               *> Determine number of customers based on room type
+               PERFORM DETERMINE-CUSTOMER-COUNT
+               *> Collect guest information for all customers
+               PERFORM COLLECT-ALL-GUEST-INFO
+           ELSE
+               MOVE 'N' TO WS-FOUND
+               DISPLAY " "
+               DISPLAY RED-COLOR "Check-in cancelled." RESET-COLOR
+               DISPLAY " "
+               DISPLAY "Press ENTER to continue..."
+               ACCEPT WS-DUMMY-INPUT
+               CLOSE BOOKING-FILE
+           END-IF.
+
+       DETERMINE-CUSTOMER-COUNT.
+           DISPLAY CLEAR-SCREEN
+           DISPLAY CYAN-COLOR
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                         GUEST COUNT SETUP         "
+           DISPLAY "==================================================="
+           "============================"
+           RESET-COLOR
+           DISPLAY "                                                   "
+
+           EVALUATE TRUE
+               WHEN WS-ROOM-TYPE = 'Single'
+                   MOVE 1 TO WS-MAX-CUSTOMERS
+                   DISPLAY "                   Single room - 1 guest "
+                   "required.                   "
+
+               WHEN WS-ROOM-TYPE = 'Double'
+                   DISPLAY "           Double room - How many guests (1"
+                   "or 2)?:                    "
+                   ACCEPT WS-CUSTOMER-COUNT
+                   IF WS-CUSTOMER-COUNT = 1 OR WS-CUSTOMER-COUNT = 2
+                       MOVE WS-CUSTOMER-COUNT TO WS-MAX-CUSTOMERS
+                   ELSE
+                       DISPLAY " "
+                      DISPLAY YELLOW-COLOR "Invalid input. Defaulting t"
+                       "o 1 guest." RESET-COLOR
+                       MOVE 1 TO WS-MAX-CUSTOMERS
+                   END-IF
+
+               WHEN WS-ROOM-TYPE = 'Delux'
+                   DISPLAY "           Delux room - How many guests (1-"
+                   "9)?:"
+                   ACCEPT WS-CUSTOMER-COUNT
+                   IF WS-CUSTOMER-COUNT >= 1 AND WS-CUSTOMER-COUNT <= 9
+                       MOVE WS-CUSTOMER-COUNT TO WS-MAX-CUSTOMERS
+                   ELSE
+                       DISPLAY " "
+                       DISPLAY YELLOW-COLOR "Invalid input. Defaulting "
+                       "to 1 guest." RESET-COLOR
+                       MOVE 1 TO WS-MAX-CUSTOMERS
+                   END-IF
+
+               WHEN OTHER
+                   DISPLAY " "
+                   DISPLAY YELLOW-COLOR "Unknown room type. Defaultin"
+                   "g to 1 guest." RESET-COLOR
+                   MOVE 1 TO WS-MAX-CUSTOMERS
+           END-EVALUATE
+
+           DISPLAY "                                                   "
+           DISPLAY GREEN-COLOR "Collecting information for "
+           WS-MAX-CUSTOMERS " guest(s)." RESET-COLOR
+           DISPLAY " "
+           DISPLAY "Press ENTER to continue..."
+           ACCEPT WS-DUMMY-INPUT.
+
+       COLLECT-ALL-GUEST-INFO.
+           MOVE 1 TO WS-CURRENT-CUSTOMER
+           PERFORM VARYING WS-GUEST-IDX FROM 1 BY 1
+                   UNTIL WS-GUEST-IDX > WS-MAX-CUSTOMERS
+               MOVE WS-GUEST-IDX TO WS-GUEST-NUMBER
+               DISPLAY CLEAR-SCREEN
+               DISPLAY BLUE-COLOR
+               DISPLAY "==============================================="
+               "===="
+               "============================"
+               DISPLAY "                         GUEST " WS-GUEST-NUMBER
+               " INFORMATION                      "
+               DISPLAY "==============================================="
+               "===="
+               "============================"
+               RESET-COLOR
+               DISPLAY "                                               "
+
+               DISPLAY "              Please provide guest "
+               WS-GUEST-NUMBER
+               " details:                       "
+               DISPLAY "                                               "
+
+
+               *> Get basic guest information
+               PERFORM GET-GUEST-BASIC-INFO
+
+               *> Check for existing customer
+               PERFORM CHECK-FOR-EXISTING-CUSTOMER
+           END-PERFORM.
+
+       GET-GUEST-BASIC-INFO.
+           *> Get and validate guest name
+           PERFORM GET-VALID-NAME
+
+           *> Get and validate guest phone
+           PERFORM GET-VALID-PHONE
+
+           *> Move values for database lookup
+           MOVE WS-GUEST-NAME-T(WS-GUEST-IDX) TO WS-GUEST-NAME
+           MOVE WS-GUEST-PHONE-T(WS-GUEST-IDX) TO WS-GUEST-PHONE.
+
+       CHECK-FOR-EXISTING-CUSTOMER.
+           *> Search for existing customer
+           PERFORM SEARCH-EXISTING-CUSTOMER
+
+           IF WS-EXISTING-CUSTOMER = 'Y'
+               *> Found existing customer - offer options
+               PERFORM HANDLE-EXISTING-CUSTOMER
+               *> Store the choice for this customer
+               MOVE WS-UPDATE-CHOICE TO WS-GUEST-CHOICE(WS-GUEST-IDX)
+               *> Store the existing customer ID
+               MOVE WS-EXISTING-CUSTOMER-ID
+               TO WS-GUEST-CUST-ID(WS-GUEST-IDX)
+
+               EVALUATE WS-UPDATE-CHOICE
+                   WHEN '1'
+                       *> Skip data entry, use existing customer info
+                       DISPLAY " "
+                       DISPLAY GREEN-COLOR "Using existing customer inf"
+                       "ormation." RESET-COLOR
+                       DISPLAY GREEN-COLOR "Skipping remaining data ent"
+                       "ry for this guest." RESET-COLOR
+                       DISPLAY GREEN-COLOR "Guest " WS-GUEST-NUMBER
+                       " information confirmed." RESET-COLOR
+                       DISPLAY " "
+                       DISPLAY "Press ENTER to continue..."
+                       ACCEPT WS-DUMMY-INPUT
+
+                   WHEN '2'
+                       *> Continue with data entry for update
+                       PERFORM GET-GUEST-DETAILED-INFO
+
+                   WHEN '3'
+                       *> Continue with data entry for new record
+                       PERFORM GET-GUEST-DETAILED-INFO
+
+                   WHEN OTHER
+                       *> Invalid choice, treat as new customer
+                       DISPLAY " "
+                       DISPLAY YELLOW-COLOR "Invalid choice. Creating n"
+                       "ew record." RESET-COLOR
+                       DISPLAY " "
+                       MOVE '3' TO WS-GUEST-CHOICE(WS-GUEST-IDX)
+                       PERFORM GET-GUEST-DETAILED-INFO
+               END-EVALUATE
+           ELSE
+               *> New customer, set choice to 3 (create new)
+               MOVE '3' TO WS-GUEST-CHOICE(WS-GUEST-IDX)
+               *> New customer, continue with normal data entry
+               PERFORM GET-GUEST-DETAILED-INFO
+           END-IF.
+
+       SEARCH-EXISTING-CUSTOMER.
+           *> Reset existing customer flag and ID
+           MOVE 'N' TO WS-EXISTING-CUSTOMER
+           MOVE 0 TO WS-EXISTING-CUSTOMER-ID
+           MOVE 'N' TO WS-EOF
+
+           OPEN INPUT CUSTOMER-FILE
+           PERFORM UNTIL WS-EOF = 'Y'
+               READ CUSTOMER-FILE NEXT
+                   AT END
+                       MOVE 'Y' TO WS-EOF
+                   NOT AT END
+                       IF FUNCTION TRIM(CUSTOMER-NAME) =
+                          FUNCTION TRIM(WS-GUEST-NAME)
+                         AND FUNCTION TRIM(CUSTOMER-PHONE) =
+                             FUNCTION TRIM(WS-GUEST-PHONE)
+                           MOVE 'Y' TO WS-EXISTING-CUSTOMER
+                           MOVE CUSTOMER-ID TO WS-EXISTING-CUSTOMER-ID
+                           MOVE 'Y' TO WS-EOF
+                       END-IF
+               END-READ
+           END-PERFORM
+           CLOSE CUSTOMER-FILE.
+
+       HANDLE-EXISTING-CUSTOMER.
+           DISPLAY " "
+           DISPLAY GREEN-COLOR "✓ Found existing customer record!"
+           RESET-COLOR
+           DISPLAY "  Customer ID: " WS-EXISTING-CUSTOMER-ID
+           DISPLAY "  Name: " WS-GUEST-NAME
+           DISPLAY "  Phone: " WS-GUEST-PHONE
+           DISPLAY " "
+           DISPLAY YELLOW-COLOR "Customer information options:"
+           RESET-COLOR
+           DISPLAY "1. Use existing information (skip data entry)"
+           DISPLAY "2. Update with new information (continue entry)"
+           DISPLAY "3. Create new customer record (continue entry)"
+           DISPLAY "Enter choice (1, 2, or 3): "
+           ACCEPT WS-UPDATE-CHOICE.
+
+       GET-GUEST-DETAILED-INFO.
+           *> Get age with validation
+           PERFORM GET-VALID-AGE
+
+           *> Get and validate gender
+           PERFORM GET-VALID-GENDER
+
+           *> Get NRC with age validation
+           PERFORM GET-VALID-NRC
+
+           *> Show entered info and confirm
+           PERFORM CONFIRM-GUEST-INFO.
+
+       GET-VALID-AGE.
+           MOVE 'N' TO WS-VALIDATION-PASSED
+           PERFORM UNTIL WS-VALIDATION-PASSED = 'Y'
+               DISPLAY "Guest Age (1-120): "
+               ACCEPT WS-GUEST-AGE
+
+               IF WS-GUEST-AGE IS NUMERIC
+                   IF WS-GUEST-AGE >= 1 AND WS-GUEST-AGE <= 120
+                       MOVE WS-GUEST-AGE TO WS-GUEST-AGE-T(WS-GUEST-IDX)
+                       MOVE 'Y' TO WS-VALIDATION-PASSED
+                   ELSE
+                       DISPLAY " "
+                       DISPLAY RED-COLOR
+                      "Invalid age. Please enter age between 1 and 120."
+                       RESET-COLOR
+                       DISPLAY " "
+                   END-IF
+               ELSE
+                   DISPLAY " "
+                   DISPLAY RED-COLOR
+                   "Invalid input. Please enter a numeric age."
+                   RESET-COLOR
+                   DISPLAY " "
+               END-IF
+           END-PERFORM.
+
+       CONFIRM-GUEST-INFO.
+           DISPLAY " "
+           DISPLAY CYAN-COLOR "--- Entered Information ---" RESET-COLOR
+           DISPLAY "Name: " WS-GUEST-NAME-T(WS-GUEST-IDX)
+           DISPLAY "Phone: " WS-GUEST-PHONE-T(WS-GUEST-IDX)
+           DISPLAY "Age: " WS-GUEST-AGE-T(WS-GUEST-IDX)
+           DISPLAY "Gender: " WS-GUEST-GENDER-T(WS-GUEST-IDX)
+           DISPLAY "NRC: " WS-GUEST-NRC-T(WS-GUEST-IDX)
+           DISPLAY "Is this information correct? (Y/N): "
+
+           ACCEPT WS-CONFIRM-INFO
+
+           IF WS-CONFIRM-INFO = 'Y' OR WS-CONFIRM-INFO = 'y'
+               DISPLAY " "
+               DISPLAY GREEN-COLOR "Guest " WS-GUEST-NUMBER
+               " information confirmed." RESET-COLOR
+               DISPLAY GREEN-COLOR "==================================="
+               "===="
+               RESET-COLOR
+               DISPLAY " "
+               DISPLAY "Press ENTER to continue..."
+               ACCEPT WS-DUMMY-INPUT
+           ELSE
+               *> If not confirmed, re-enter information for this guest
+               DISPLAY " "
+               DISPLAY YELLOW-COLOR "Please re-enter information for gu"
+               "est"
+               " " WS-GUEST-NUMBER RESET-COLOR
+               DISPLAY YELLOW-COLOR "=================================="
+               "====="
+               RESET-COLOR
+               DISPLAY " "
+               PERFORM GET-GUEST-BASIC-INFO
+               PERFORM CHECK-FOR-EXISTING-CUSTOMER
+           END-IF.
+
+      *****************************************************************
+      * STEP 3: EXECUTE CHECK-IN PROCESS
+      *****************************************************************
+       EXECUTE-CHECK-IN.
+           *> Check for duplicate check-in first
+           PERFORM CHECK-DUPLICATE-CHECKIN
+           IF WS-FOUND = 'N'
+               EXIT PARAGRAPH
+           END-IF
+
+           *> Generate next check-in ID
+           PERFORM GENERATE-NEXT-CHECKIN-ID
+
+           *> Get current date and time
+           PERFORM GET-CURRENT-DATETIME
+
+           *> Create check-in record
+           PERFORM CREATE-CHECKIN-RECORD
+
+           *> Process all customer records
+           PERFORM PROCESS-ALL-CUSTOMER-RECORDS
+
+           *> Create staylog records for all guests
+           PERFORM CREATE-ALL-STAYLOG-RECORDS
+
+           *> Update booking and room status
+           PERFORM UPDATE-BOOKING-STATUS
+           PERFORM UPDATE-ROOM-TO-OCCUPIED
+
+           *> Close booking file
+           CLOSE BOOKING-FILE
+
+           DISPLAY CLEAR-SCREEN
+           DISPLAY GREEN-COLOR
+           DISPLAY "==============================================="
+           "================================"
+           DISPLAY "                        CHECK-IN COMPLETED SUCCE"
+           "SSFULLY                        "
+           DISPLAY "==============================================="
+           "================================"
+           RESET-COLOR
+           DISPLAY "                                                   "
+           DISPLAY "          Guest has been successfully checked in!"
+           DISPLAY "                                                   "
+           DISPLAY "==============================================="
+           "================================"
+           DISPLAY " "
+           DISPLAY "Press ENTER to continue..."
+           ACCEPT WS-DUMMY-INPUT.
+
+       GET-CURRENT-DATETIME.
+           MOVE FUNCTION CURRENT-DATE(1:8) TO WS-CURRENT-DATE
+           MOVE FUNCTION CURRENT-DATE TO WS-CURRENT-TIMESTAMP
+           ACCEPT WS-CURRENT-TIME-FIELDS FROM TIME
            STRING WS-CURRENT-HOUR DELIMITED BY SIZE
                   WS-CURRENT-MINUTE DELIMITED BY SIZE
                   WS-CURRENT-SECOND DELIMITED BY SIZE
                   INTO WS-TIME-FORMATTED.
 
-           MOVE WS-BOOKING-ID TO BOOKING-ID OF BOOKING-RECORD.
-           READ BOOKING-FILE
+       CREATE-CHECKIN-RECORD.
+           OPEN I-O CHECKINOUT-FILE
+           MOVE WS-NEXT-CHECKIN-ID TO CHECKIN-ID
+           MOVE BOOKING-ID TO BOOKING-ID-IO
+           MOVE ROOM-ID-BK TO ROOM-ID-IO
+           MOVE WS-CURRENT-DATE TO ACTUAL-CHECKIN-DATE
+           MOVE WS-TIME-FORMATTED TO ACTUAL-CHECKIN-TIME
+           MOVE 'N' TO CHECKOUT-FLAG
+           MOVE 0 TO CHECKOUT-DATE
+
+           WRITE CHECKINOUT-RECORD
                INVALID KEY
-                   DISPLAY RED-COLOR "Booking ID " WS-BOOKING-ID
-                   " not found." RESET-COLOR
-                   CLOSE BOOKING-FILE
-                   GO TO MAIN-PROCEDURE
+                   DISPLAY " "
+                   DISPLAY RED-COLOR "*** ERROR: Unable to create ch"
+                   "eck-in record. ***" RESET-COLOR
+                   DISPLAY " "
                NOT INVALID KEY
-                   IF BOOKING-STATUS OF BOOKING-RECORD = 'Active'
-                       IF CHEKIN-FLAG OF BOOKING-RECORD = 'N'
-                           *> Allow early check-in or normal check-in
-                           PERFORM CHECK-EARLY-CHECKIN-ALLOWED
-                           IF WS-FOUND = 'Y'
-                               MOVE 'Y' TO CHEKIN-FLAG OF BOOKING-RECORD
-                               REWRITE BOOKING-RECORD
-                                   INVALID KEY
-                               DISPLAY RED-COLOR
-                               "Error processing check-in." RESET-COLOR
-                                   NOT INVALID KEY
-                                       DISPLAY GREEN-COLOR
-                                      "Check-In Completed Successfully!"
-                                      RESET-COLOR
-                                      DISPLAY " "
-                                       DISPLAY "Booking ID: " BOOKING-ID
-                                      DISPLAY "Room Number: " ROOM-ID-BK
-                                       DISPLAY "Check-in Date: "
-                                           CHECKIN-DATE(1:4) "/"
-                                           CHECKIN-DATE(5:2) "/"
-                                           CHECKIN-DATE(7:2)
-                                       DISPLAY "Check-in Time: "
-                                           WS-TIME-FORMATTED
-                                           DISPLAY " "
-                                       *> Add guest information
-                                       PERFORM ADD-GUEST-INFORMATION
-                               END-REWRITE
-                           END-IF
-                       ELSE
-                           DISPLAY RED-COLOR "Booking ID "
-                    WS-BOOKING-ID " is already checked in." RESET-COLOR
-                           DISPLAY "Status: Already Checked In"
-                           CLOSE BOOKING-FILE
-                           GO TO MAIN-PROCEDURE
-                       END-IF
-                   ELSE
-                       DISPLAY RED-COLOR "Booking ID " WS-BOOKING-ID
-                       " is not active." RESET-COLOR
-                       DISPLAY "Current status: "
-                       BOOKING-STATUS OF BOOKING-RECORD
-                       CLOSE BOOKING-FILE
-                       GO TO MAIN-PROCEDURE
-                   END-IF
-           END-READ.
+                   DISPLAY " "
+                   DISPLAY GREEN-COLOR "✓ Check-in record created suc"
+                   "cessfully!" RESET-COLOR
+                   DISPLAY "  Check-in ID: " CHECKIN-ID
+                   DISPLAY "  Check-in Date: "
+                   ACTUAL-CHECKIN-DATE(1:4) "/"
+                           ACTUAL-CHECKIN-DATE(5:2) "/"
+                           ACTUAL-CHECKIN-DATE(7:2)
+                   DISPLAY "  Check-in Time: "
+                   ACTUAL-CHECKIN-TIME(1:2) ":"
+                           ACTUAL-CHECKIN-TIME(3:2) ":"
+                           ACTUAL-CHECKIN-TIME(5:2)
+                   DISPLAY " "
+           END-WRITE
+           CLOSE CHECKINOUT-FILE.
 
-           CLOSE BOOKING-FILE.
+       PROCESS-ALL-CUSTOMER-RECORDS.
+           PERFORM VARYING WS-GUEST-IDX FROM 1 BY 1
+                   UNTIL WS-GUEST-IDX > WS-MAX-CUSTOMERS
+               DISPLAY " "
+               DISPLAY "Processing customer record "
+                       FUNCTION TRIM(WS-GUEST-IDX)
+                       " of " FUNCTION TRIM(WS-MAX-CUSTOMERS) "..."
 
-       CHECK-EARLY-CHECKIN-ALLOWED.
-           MOVE 'Y' TO WS-FOUND
-           *> Check if current date is before scheduled check-in date
-           IF FUNCTION INTEGER-OF-DATE(WS-CURRENT-DATE) <
-              FUNCTION INTEGER-OF-DATE(CHECKIN-DATE)
-               *> Early check-in requested
-               DISPLAY "Early check-in requested."
-               DISPLAY "Scheduled check-in: " CHECKIN-DATE(1:4) "/"
-                       CHECKIN-DATE(5:2) "/" CHECKIN-DATE(7:2)
-               DISPLAY "Current date: " WS-CURRENT-DATE(1:4) "/"
-                       WS-CURRENT-DATE(5:2) "/" WS-CURRENT-DATE(7:2)
-               *> Check if room is available for early check-in
-               PERFORM CHECK-EARLY-CHECKIN
-               IF WS-FOUND = 'N'
-                   DISPLAY RED-COLOR
-                 "Room is not available for early check-in." RESET-COLOR
-              DISPLAY "Please check in on or after your scheduled date."
-               ELSE
-                  DISPLAY GREEN-COLOR
-                   "Early check-in approved - room is available."
-                   RESET-COLOR
-               END-IF
-           ELSE
-               DISPLAY "Normal check-in on scheduled date."
-           END-IF.
+               *> Load guest info to working area
+               PERFORM LOAD-GUEST-INFO
 
-       CHECK-EARLY-CHECKIN.
-           MOVE 'Y' TO WS-FOUND
-           *> Check if room is currently occupied or has conflicting bookings
+               *> Process based on the choice
+               EVALUATE WS-GUEST-CHOICE(WS-GUEST-IDX)
+                   WHEN '1'
+                       *> Option 1: Use existing customer - don't need to do anything
+                       DISPLAY "✓ Using existing customer record!"
+                       DISPLAY "  Customer ID: "
+                              WS-GUEST-CUST-ID(WS-GUEST-IDX)
 
-           MOVE 'N' TO WS-EOF
+                   WHEN '2'
+                       *> Option 2: Update existing customer
+                       MOVE WS-GUEST-CUST-ID(WS-GUEST-IDX)
+                          TO WS-EXISTING-CUSTOMER-ID
+                       PERFORM UPDATE-EXISTING-CUSTOMER
 
-           PERFORM UNTIL WS-EOF = 'Y'
-               READ BOOKING-FILE NEXT
-                   AT END
-                       MOVE 'Y' TO WS-EOF
-                   NOT AT END
-                       *> Check for other active bookings for same room
-                       IF ROOM-ID-BK = ROOM-ID-BK OF BOOKING-RECORD
-                      AND BOOKING-ID NOT = BOOKING-ID OF BOOKING-RECORD
-                          AND BOOKING-STATUS = 'Active'
-                          AND CHEKIN-FLAG = 'Y'
-                          AND CHECKOUT-FLAG = 'N'
-                           *> Room is currently occupied
-                           MOVE 'N' TO WS-FOUND
-                           MOVE 'Y' TO WS-EOF
-                       END-IF
-               END-READ
+                   WHEN '3'
+                       *> Option 3: Create new customer record
+                       PERFORM CREATE-CUSTOMER-RECORD
+                       MOVE WS-NEXT-CUSTOMER-ID
+                          TO WS-GUEST-CUST-ID(WS-GUEST-IDX)
+
+                   WHEN OTHER
+                       *> Should not happen - default to creating a new record
+                       DISPLAY
+                       "Warning: Invalid choice - creating new record"
+                       PERFORM CREATE-CUSTOMER-RECORD
+                       MOVE WS-NEXT-CUSTOMER-ID
+                          TO WS-GUEST-CUST-ID(WS-GUEST-IDX)
+               END-EVALUATE
            END-PERFORM.
 
-       CHECK-IN-BY-PHONE.
-           *> Find customer by phone number
-           PERFORM FIND-CUSTOMER-BY-PHONE
-           IF WS-FOUND = 'N'
-               DISPLAY RED-COLOR "No guest found with phone number: "
-                       WS-CUSTOMER-PHONE RESET-COLOR
-               EXIT PARAGRAPH
-           END-IF
+       LOAD-GUEST-INFO.
+           *> Move guest data to working variables
+           MOVE WS-GUEST-NAME-T(WS-GUEST-IDX) TO WS-GUEST-NAME
+           MOVE WS-GUEST-PHONE-T(WS-GUEST-IDX) TO WS-GUEST-PHONE
+           MOVE WS-GUEST-AGE-T(WS-GUEST-IDX) TO WS-GUEST-AGE
+           MOVE WS-GUEST-GENDER-T(WS-GUEST-IDX) TO WS-GUEST-GENDER
+           MOVE WS-GUEST-NRC-T(WS-GUEST-IDX) TO WS-GUEST-NRC.
 
-           *> Find active bookings for this customer
-           PERFORM FIND-ACTIVE-CHECKIN
-           IF WS-BOOKING-COUNT = 0
-              DISPLAY RED-COLOR "No active bookings found for check-in."
-               RESET-COLOR
-               EXIT PARAGRAPH
-           END-IF
+       UPDATE-EXISTING-CUSTOMER.
+           OPEN I-O CUSTOMER-FILE
+           MOVE WS-EXISTING-CUSTOMER-ID TO CUSTOMER-ID
+           READ CUSTOMER-FILE KEY IS CUSTOMER-ID
+               INVALID KEY
+                   DISPLAY
+                   "Error: Could not find customer record to update."
+               NOT INVALID KEY
+                   DISPLAY "Updating customer information..."
+                   MOVE WS-GUEST-NAME TO CUSTOMER-NAME
+                   MOVE WS-GUEST-PHONE TO CUSTOMER-PHONE
+                   MOVE WS-GUEST-AGE TO CUSTOMER-AGE
+                   MOVE WS-GUEST-GENDER TO CUSTOMER-GENDER
+                   MOVE WS-GUEST-NRC TO NRC-NUMBER
 
-           *> Display bookings and let user choose
-           PERFORM DISPLAY-CHECKIN-BOOKINGS
-           PERFORM SELECT-BOOKING-FOR-CHECKIN.
+                   REWRITE CUSTOMER-RECORD
+                       INVALID KEY
+                           DISPLAY
+                           "Error: Unable to update customer record."
+                       NOT INVALID KEY
+                           DISPLAY
+                           "✓ Customer record updated successfully!"
+                           DISPLAY "  Customer ID: " CUSTOMER-ID
+                           DISPLAY "  Updated Name: " CUSTOMER-NAME
+                           DISPLAY "  Updated Phone: " CUSTOMER-PHONE
+                   END-REWRITE
+           END-READ
+           CLOSE CUSTOMER-FILE.
 
-       FIND-CUSTOMER-BY-PHONE.
-           MOVE 'N' TO WS-ID-FOUND
-           MOVE 'N' TO WS-EOF
-
-           OPEN INPUT CUSTOMER-FILE
-           PERFORM UNTIL WS-EOF = 'Y'
-               READ CUSTOMER-FILE NEXT
-                   AT END
-                       MOVE 'Y' TO WS-EOF
-                   NOT AT END
-                       IF CUSTOMER-PHONE = WS-CUSTOMER-PHONE
-                      DISPLAY "We found your guest profile:"
-                           DISPLAY "Guest ID: " CUSTOMER-ID
-                           DISPLAY "Name: " CUSTOMER-NAME
-                           DISPLAY "Phone: " CUSTOMER-PHONE
-                           DISPLAY "Use this profile? (Y/N): "
-                           ACCEPT WS-EXIST-CHOICE
-                           DISPLAY " "
-
-                       IF WS-EXIST-CHOICE = 'Y' OR WS-EXIST-CHOICE = 'y'
-                               MOVE CUSTOMER-ID TO WS-CUSTOMER-ID
-                               MOVE CUSTOMER-NAME TO WS-CUSTOMER-NAME
-                               MOVE 'Y' TO WS-ID-FOUND
-                               MOVE 'Y' TO WS-EOF
-                           END-IF
-                       END-IF
-               END-READ
-           END-PERFORM
-           CLOSE CUSTOMER-FILE
-
-           IF WS-ID-FOUND = 'Y'
-               MOVE 'Y' TO WS-FOUND
-           ELSE
-               MOVE 'N' TO WS-FOUND
-           END-IF.
-
-       FIND-ACTIVE-CHECKIN.
-           MOVE 0 TO WS-BOOKING-COUNT
-           MOVE 'N' TO WS-EOF
-
-           OPEN INPUT BOOKING-FILE
-           PERFORM UNTIL WS-EOF = 'Y'
-               READ BOOKING-FILE NEXT
-                   AT END
-                       MOVE 'Y' TO WS-EOF
-                   NOT AT END
-                       IF CUSTOMER-ID-BK = WS-CUSTOMER-ID
-                          AND BOOKING-STATUS = 'Active'
-                          AND CHEKIN-FLAG = 'N'
-                           ADD 1 TO WS-BOOKING-COUNT
-                           IF WS-BOOKING-COUNT <= 20
-                               MOVE BOOKING-ID TO
-                                   WS-FOUND-BOOKING-ID(WS-BOOKING-COUNT)
-                               MOVE ROOM-ID-BK TO
-                                   WS-FOUND-ROOM-ID(WS-BOOKING-COUNT)
-                               MOVE CHECKIN-DATE TO
-                                 WS-FOUND-CHECKIN-DATE(WS-BOOKING-COUNT)
-                               MOVE CHECKOUT-DATE TO
-                                WS-FOUND-CHECKOUT-DATE(WS-BOOKING-COUNT)
-                           END-IF
-                       END-IF
-               END-READ
-           END-PERFORM
-           CLOSE BOOKING-FILE.
-
-       DISPLAY-CHECKIN-BOOKINGS.
-           DISPLAY "Active bookings for check-in:"
-           DISPLAY "=================================================="
-           PERFORM VARYING WS-BOOKING-CHOICE FROM 1 BY 1
-                   UNTIL WS-BOOKING-CHOICE > WS-BOOKING-COUNT
-               DISPLAY WS-BOOKING-CHOICE ". Booking ID: "
-                       WS-FOUND-BOOKING-ID(WS-BOOKING-CHOICE)
-                       " | Room: "
-                       WS-FOUND-ROOM-ID(WS-BOOKING-CHOICE)
-               DISPLAY "   Check-in: "
-                   WS-FOUND-CHECKIN-DATE(WS-BOOKING-CHOICE)(1:4) "/"
-                   WS-FOUND-CHECKIN-DATE(WS-BOOKING-CHOICE)(5:2) "/"
-                   WS-FOUND-CHECKIN-DATE(WS-BOOKING-CHOICE)(7:2)
-                       " | Check-out: "
-                   WS-FOUND-CHECKOUT-DATE(WS-BOOKING-CHOICE)(1:4) "/"
-                   WS-FOUND-CHECKOUT-DATE(WS-BOOKING-CHOICE)(5:2) "/"
-                   WS-FOUND-CHECKOUT-DATE(WS-BOOKING-CHOICE)(7:2)
-           END-PERFORM
-           DISPLAY "==================================================".
-
-
-       SELECT-BOOKING-FOR-CHECKIN.
-           DISPLAY "Please select a booking to check in (1-"
-            WS-BOOKING-COUNT
-                   ") or 0 to cancel: "
-           ACCEPT WS-BOOKING-CHOICE
-           DISPLAY " "
-
-           IF WS-BOOKING-CHOICE = 0
-               DISPLAY RED-COLOR "Check-in cancelled." RESET-COLOR
-           ELSE IF WS-BOOKING-CHOICE >= 1
-               AND WS-BOOKING-CHOICE <= WS-BOOKING-COUNT
-               MOVE WS-FOUND-BOOKING-ID(WS-BOOKING-CHOICE)
-                   TO WS-BOOKING-ID
-               PERFORM CHECK-BOOKING-ID-AND-CHECK-IN
-               PERFORM CHANGE-ROOM-STATUS
-           ELSE
-               DISPLAY RED-COLOR "Invalid selection. Please try again."
-                RESET-COLOR
-               GO TO SELECT-BOOKING-FOR-CHECKIN
-           END-IF.
-
-       WALK-IN-CHECK-IN.
-           DISPLAY "===== Walk-in Guest Check-In ====="
-
-           *> Get customer information
-           PERFORM GET-WALKIN-CUSTOMER-INFO
-
-           *> Show available rooms
-           PERFORM SHOW-AVAILABLE-ROOMS-FOR-WALKIN
-           IF WS-AVAILABLE-COUNT = 0
-               DISPLAY RED-COLOR
-           "Sorry, no rooms are currently available for walk-in guests."
-            RESET-COLOR
-               EXIT PARAGRAPH
-           END-IF
-
-           *> Let customer select room
-           PERFORM SELECT-ROOM-FOR-WALKIN
-           IF WS-FOUND = 'N'
-               EXIT PARAGRAPH
-           END-IF
-
-           *> Get checkout date
-           PERFORM GET-WALKIN-CHECKOUT-DATE
-
-           *> Create booking and check in immediately
-           PERFORM CREATE-WALKIN-BOOKING
-           PERFORM CHANGE-ROOM-STATUS
-           *> Add guest information for walk-in
-           PERFORM ADD-GUEST-INFORMATION.
-
-       GET-WALKIN-CUSTOMER-INFO.
-           DISPLAY "Please enter your phone number: "
-           ACCEPT WS-CUSTOMER-PHONE
-           DISPLAY " "
-           *> Check if customer exists by phone number
-           PERFORM FIND-CUSTOMER-BY-PHONE
-           IF WS-FOUND = 'N'
-               *> Get customer name for new customer
-               DISPLAY "Please enter your full name: "
-               ACCEPT WS-CUSTOMER-NAME
-               DISPLAY " "
-               *> Create new customer
-               PERFORM CREATE-WALKIN-CUSTOMER
-           END-IF.
-
-       CREATE-WALKIN-CUSTOMER.
-           *> Find next customer ID
-           OPEN INPUT CUSTOMER-FILE
-           MOVE 0 TO WS-CUSTOMER-ID
-           MOVE 'N' TO WS-EOF
-
-           PERFORM UNTIL WS-EOF = 'Y'
-               READ CUSTOMER-FILE NEXT
-                   AT END
-                       MOVE 'Y' TO WS-EOF
-                   NOT AT END
-                       IF CUSTOMER-ID > WS-CUSTOMER-ID
-                           MOVE CUSTOMER-ID TO WS-CUSTOMER-ID
-                       END-IF
-               END-READ
-           END-PERFORM
-           CLOSE CUSTOMER-FILE
-
-           ADD 1 TO WS-CUSTOMER-ID
-
-           *> Create customer record
-           MOVE WS-CUSTOMER-ID TO CUSTOMER-ID
-           MOVE WS-CUSTOMER-NAME TO CUSTOMER-NAME
-           MOVE WS-CUSTOMER-PHONE TO CUSTOMER-PHONE
+       CREATE-CUSTOMER-RECORD.
+           *> Generate next customer ID
+           PERFORM GENERATE-NEXT-CUSTOMER-ID
 
            OPEN I-O CUSTOMER-FILE
+           MOVE WS-NEXT-CUSTOMER-ID TO CUSTOMER-ID
+           MOVE WS-GUEST-NAME TO CUSTOMER-NAME
+           MOVE WS-GUEST-PHONE TO CUSTOMER-PHONE
+           MOVE WS-GUEST-AGE TO CUSTOMER-AGE
+           MOVE WS-GUEST-GENDER TO CUSTOMER-GENDER
+           MOVE WS-GUEST-NRC TO NRC-NUMBER
+
            WRITE CUSTOMER-RECORD
+               INVALID KEY
+                   DISPLAY "Error: Unable to create customer record."
+               NOT INVALID KEY
+                   DISPLAY "✓ Customer record created successfully!"
+                   DISPLAY "  Customer ID: " CUSTOMER-ID
+                   DISPLAY "  Name: " CUSTOMER-NAME
+                   DISPLAY "  Phone: " CUSTOMER-PHONE
+           END-WRITE
+           CLOSE CUSTOMER-FILE.
+
+       CREATE-ALL-STAYLOG-RECORDS.
+           PERFORM VARYING WS-GUEST-IDX FROM 1 BY 1
+                   UNTIL WS-GUEST-IDX > WS-MAX-CUSTOMERS
+               DISPLAY " "
+               DISPLAY "Creating staylog record "
+                       FUNCTION TRIM(WS-GUEST-IDX)
+                       " of " FUNCTION TRIM(WS-MAX-CUSTOMERS) "..."
+
+               *> Create the staylog record
+               PERFORM CREATE-STAYLOG-RECORD
+           END-PERFORM.
+
+       CREATE-STAYLOG-RECORD.
+           *> Generate next staylog ID
+           PERFORM GENERATE-NEXT-STAYLOG-ID
+
+           OPEN I-O STAYLOG-FILE
+           MOVE WS-NEXT-STAYLOG-ID TO STAYLOG-ID
+           *> Use the stored customer ID for this guest
+           MOVE WS-GUEST-CUST-ID(WS-GUEST-IDX) TO CUSTOMER-ID-SL
+           MOVE WS-NEXT-CHECKIN-ID TO CHECKIN-ID-SL
+           MOVE BOOKING-ID OF BOOKING-RECORD TO BOOKING-ID-SL
+           MOVE ROOM-ID-BK TO ROOM-ID-SL
+
+           WRITE STAYLOG-RECORD
+               INVALID KEY
+                   DISPLAY "Error: Unable to create staylog record."
+               NOT INVALID KEY
+                   DISPLAY "✓ Staylog record created successfully!"
+                   DISPLAY "  Staylog ID: " STAYLOG-ID
+                   DISPLAY "  Customer ID: " CUSTOMER-ID-SL
+                   DISPLAY "  Check-in ID: " CHECKIN-ID-SL
+           END-WRITE
+           CLOSE STAYLOG-FILE.
+
+       UPDATE-BOOKING-STATUS.
+           *> Update booking status to completed
+           MOVE 'Completed' TO BOOKING-STATUS
+           REWRITE BOOKING-RECORD
+               INVALID KEY
+                   DISPLAY "Error: Unable to update booking record."
+               NOT INVALID KEY
+                   DISPLAY "✓ Booking status updated to Completed"
+                   DISPLAY "  Booking ID: " BOOKING-ID
+                   DISPLAY "  Room: " ROOM-ID-BK
+                   DISPLAY "  Check-in Time: "
+                   WS-TIME-FORMATTED(1:2) ":"
+                   WS-TIME-FORMATTED(3:2) ":" WS-TIME-FORMATTED(5:2)
+           END-REWRITE.
+
+       UPDATE-ROOM-TO-OCCUPIED.
+           OPEN I-O ROOMS-FILE
+           MOVE ROOM-ID-BK TO ROOM-ID
+           READ ROOMS-FILE KEY IS ROOM-ID
+               INVALID KEY
+                   DISPLAY "Warning: Could not find room " ROOM-ID-BK
+               NOT INVALID KEY
+                   MOVE 'Occupied' TO R-STATUS
+                   REWRITE ROOMS-RECORD
+                       INVALID KEY
+                          DISPLAY "Error: Unable to update room status."
+                       NOT INVALID KEY
+                           DISPLAY "✓ Room " ROOM-ID-BK
+                                   " status updated to Occupied."
+                   END-REWRITE
+           END-READ
+           CLOSE ROOMS-FILE.
+
+      *****************************************************************
+      * ID GENERATION PROCEDURES
+      *****************************************************************
+       GENERATE-NEXT-CHECKIN-ID.
+           MOVE 'N' TO WS-EOF
+           MOVE 0 TO WS-NEXT-CHECKIN-ID
+
+           OPEN INPUT CHECKINOUT-FILE
+           PERFORM UNTIL WS-EOF = 'Y'
+               READ CHECKINOUT-FILE NEXT
+                   AT END
+                       MOVE 'Y' TO WS-EOF
+                   NOT AT END
+                       IF CHECKIN-ID > WS-NEXT-CHECKIN-ID
+                           MOVE CHECKIN-ID TO WS-NEXT-CHECKIN-ID
+                       END-IF
+               END-READ
+           END-PERFORM
+           CLOSE CHECKINOUT-FILE
+
+           ADD 1 TO WS-NEXT-CHECKIN-ID.
+
+       GENERATE-NEXT-CUSTOMER-ID.
+           MOVE 'N' TO WS-EOF
+           MOVE 0 TO WS-NEXT-CUSTOMER-ID
+
+           OPEN INPUT CUSTOMER-FILE
+           PERFORM UNTIL WS-EOF = 'Y'
+               READ CUSTOMER-FILE NEXT
+                   AT END
+                       MOVE 'Y' TO WS-EOF
+                   NOT AT END
+                       IF CUSTOMER-ID > WS-NEXT-CUSTOMER-ID
+                           MOVE CUSTOMER-ID TO WS-NEXT-CUSTOMER-ID
+                       END-IF
+               END-READ
+           END-PERFORM
            CLOSE CUSTOMER-FILE
 
-           DISPLAY GREEN-COLOR "New guest profile created with ID: "
-           WS-CUSTOMER-ID RESET-COLOR.
+           ADD 1 TO WS-NEXT-CUSTOMER-ID.
 
-       SHOW-AVAILABLE-ROOMS-FOR-WALKIN.
-           MOVE ZEROS TO WS-AVAILABLE-COUNT
+       GENERATE-NEXT-STAYLOG-ID.
            MOVE 'N' TO WS-EOF
+           MOVE 0 TO WS-NEXT-STAYLOG-ID
+
+           OPEN INPUT STAYLOG-FILE
+           PERFORM UNTIL WS-EOF = 'Y'
+               READ STAYLOG-FILE NEXT
+                   AT END
+                       MOVE 'Y' TO WS-EOF
+                   NOT AT END
+                       IF STAYLOG-ID > WS-NEXT-STAYLOG-ID
+                           MOVE STAYLOG-ID TO WS-NEXT-STAYLOG-ID
+                       END-IF
+               END-READ
+           END-PERFORM
+           CLOSE STAYLOG-FILE
+
+           ADD 1 TO WS-NEXT-STAYLOG-ID.
+
+       CHECK-DUPLICATE-CHECKIN.
+           MOVE 'Y' TO WS-FOUND
+           MOVE 'N' TO WS-EOF
+
+           DISPLAY " "
+           DISPLAY "Checking for existing check-in records..."
+
+           OPEN INPUT CHECKINOUT-FILE
+           PERFORM UNTIL WS-EOF = 'Y'
+               READ CHECKINOUT-FILE NEXT
+                   AT END
+                       MOVE 'Y' TO WS-EOF
+                   NOT AT END
+                   *> Check if this booking ID already has a check-in
+                   IF BOOKING-ID-IO = BOOKING-ID
+                      DISPLAY CLEAR-SCREEN
+                      DISPLAY RED-COLOR
+                      DISPLAY "========================================"
+                      "======="
+                      "================================"
+                      DISPLAY "                        DUPLICATE CHECK-"
+                      "IN DE"
+                      "TECTED!                        "
+                      DISPLAY "========================================"
+                      "======="
+                      "================================"
+                      RESET-COLOR
+                      DISPLAY "                                        "
+
+                      DISPLAY "        This booking has already been ch"
+                      "ecked "
+                      "in:                       "
+                      DISPLAY "          Booking ID: " BOOKING-ID-IO
+                      DISPLAY "          Check-in ID: " CHECKIN-ID
+                      DISPLAY "          Room: " ROOM-ID-IO
+
+                      *> Check if guest is currently checked out
+                      IF CHECKOUT-FLAG = 'Y'
+                          DISPLAY "          Status: Previously checked"
+                          "out"
+                          DISPLAY " "
+                          DISPLAY "        This booking was already use"
+                          "d for "
+                          "a completed stay.             "
+                      ELSE
+                          DISPLAY "          Status: Currently active ("
+                          "not c"
+                          "hecked out)                  "
+                          DISPLAY " "
+                          DISPLAY "        Guest is currently checked "
+                          "in!"
+                      END-IF
+
+                      DISPLAY " "
+                      DISPLAY "        Cannot proceed with duplicate ch"
+                      "eck-i"
+                      "n.                        "
+                      DISPLAY "======================================="
+                      "========"
+                      "================================"
+                      DISPLAY " "
+                      DISPLAY "Press ENTER to continue..."
+                      ACCEPT WS-DUMMY-INPUT
+                      MOVE 'N' TO WS-FOUND
+                      MOVE 'Y' TO WS-EOF
+                       END-IF
+               END-READ
+           END-PERFORM
+           CLOSE CHECKINOUT-FILE
+
+           IF WS-FOUND = 'Y'
+               DISPLAY " "
+               DISPLAY GREEN-COLOR "✓ No duplicate check-in found. Pr"
+               "ocee"
+               "ding..." RESET-COLOR
+               DISPLAY " "
+           END-IF.
+
+      *****************************************************************
+      * WALK-IN CHECK-IN MAIN PROCESS
+      *****************************************************************
+       WALKIN-CHECK-IN-PROCESS.
+           PERFORM SELECT-ROOM-TYPE
+           IF WS-FOUND = 'Y'
+               PERFORM LIST-AVAILABLE-ROOMS
+               IF WS-FOUND = 'Y'
+                   PERFORM SELECT-ROOM
+                   IF WS-FOUND = 'Y'
+                       PERFORM WALKIN-COLLECT-GUEST-INFO
+                       IF WS-FOUND = 'Y'
+                           PERFORM EXECUTE-WALKIN-CHECK-IN
+                       END-IF
+                   END-IF
+               END-IF
+           END-IF.
+
+       SELECT-ROOM-TYPE.
+           DISPLAY CLEAR-SCREEN
+           DISPLAY CYAN-COLOR
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                        WALK-IN CHECK-IN           "
+           DISPLAY "==================================================="
+           "============================"
+           RESET-COLOR
+           DISPLAY "                                                   "
+           DISPLAY "           Please select room type:                "
+           DISPLAY "                                                   "
+           DISPLAY "                1. Single                          "
+           DISPLAY "                2. Double                          "
+           DISPLAY "                3. Delux                           "
+           DISPLAY "                9. Go Back                         "
+           DISPLAY "                                                   "
+           DISPLAY "Enter your choice: "
+           ACCEPT WS-CHOICE
+
+           EVALUATE WS-CHOICE
+               WHEN 1
+                   MOVE 'Single' TO WS-SELECTED-ROOM-TYPE
+                   MOVE 'Y' TO WS-FOUND
+               WHEN 2
+                   MOVE 'Double' TO WS-SELECTED-ROOM-TYPE
+                   MOVE 'Y' TO WS-FOUND
+               WHEN 3
+                   MOVE 'Delux' TO WS-SELECTED-ROOM-TYPE
+                   MOVE 'Y' TO WS-FOUND
+               WHEN 9
+                   MOVE 'N' TO WS-FOUND
+               WHEN OTHER
+                   DISPLAY " "
+                   DISPLAY RED-COLOR
+                   "Invalid selection. Please choose 1, 2, 3, or 9."
+                   RESET-COLOR
+                   DISPLAY "Press ENTER to continue..."
+                   ACCEPT WS-DUMMY-INPUT
+                   MOVE 'N' TO WS-FOUND
+           END-EVALUATE.
+
+       LIST-AVAILABLE-ROOMS.
+           DISPLAY CLEAR-SCREEN
+           DISPLAY GREEN-COLOR
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY
+           "          AVAILABLE " WS-SELECTED-ROOM-TYPE " ROOMS"
+           DISPLAY "==================================================="
+           "============================"
+           RESET-COLOR
+           DISPLAY "                                                   "
+
+           MOVE 0 TO WS-AVAILABLE-ROOMS
+           MOVE 0 TO WS-ROOM-DISPLAY-COUNT
+           MOVE 0 TO WS-ROOM-COUNTER
+           MOVE 'N' TO WS-EOF
+
+           *> Initialize room array
+           PERFORM VARYING WS-ROOM-COUNTER FROM 1 BY 1
+           UNTIL WS-ROOM-COUNTER > 50
+               MOVE SPACES TO WS-ROOM-ID-ARRAY(WS-ROOM-COUNTER)
+               MOVE SPACES TO WS-ROOM-TYPE-ARRAY(WS-ROOM-COUNTER)
+               MOVE 0 TO WS-ROOM-PRICE-ARRAY(WS-ROOM-COUNTER)
+           END-PERFORM
+
+           MOVE 0 TO WS-ROOM-COUNTER
 
            OPEN INPUT ROOMS-FILE
            PERFORM UNTIL WS-EOF = 'Y'
@@ -461,278 +1081,540 @@
                    AT END
                        MOVE 'Y' TO WS-EOF
                    NOT AT END
-                       IF R-STATUS = 'Available'
-                           ADD 1 TO WS-AVAILABLE-COUNT
-                           IF WS-AVAILABLE-COUNT <= 20
-                               MOVE ROOM-ID TO
-                                WS-AVAILABLE-ROOM-ID(WS-AVAILABLE-COUNT)
-                               MOVE ROOM-TYPE TO
-                              WS-AVAILABLE-ROOM-TYPE(WS-AVAILABLE-COUNT)
-                               MOVE PRICE-PER-NIGHT TO
-                             WS-AVAILABLE-ROOM-PRICE(WS-AVAILABLE-COUNT)
-                           END-IF
+                       IF ROOM-TYPE = WS-SELECTED-ROOM-TYPE
+                         AND R-STATUS = 'Available'
+                           ADD 1 TO WS-AVAILABLE-ROOMS
+                           ADD 1 TO WS-ROOM-COUNTER
+
+                           *> Store room information in array
+                           MOVE ROOM-ID
+                           TO WS-ROOM-ID-ARRAY(WS-ROOM-COUNTER)
+                           MOVE ROOM-TYPE
+                           TO WS-ROOM-TYPE-ARRAY(WS-ROOM-COUNTER)
+                           MOVE PRICE-PER-NIGHT
+                           TO WS-ROOM-PRICE-ARRAY(WS-ROOM-COUNTER)
+
+                           *> Display room
+
+                           DISPLAY "  " WS-ROOM-COUNTER ". Room "
+                           ROOM-ID " - " ROOM-TYPE
+                           " ("
+                  FUNCTION TRIM(WS-ROOM-PRICE-ARRAY(WS-ROOM-COUNTER))
+                           "/night)"
                        END-IF
                END-READ
            END-PERFORM
            CLOSE ROOMS-FILE
 
-           IF WS-AVAILABLE-COUNT > 0
-               DISPLAY "Available rooms for tonight:"
-            DISPLAY "=================================================="
-               *> Display up to 20 rooms maximum
-               IF WS-AVAILABLE-COUNT > 20
-                   MOVE 20 TO WS-AVAILABLE-COUNT
-                   DISPLAY "Note: Showing first 20 available rooms."
-               END-IF
-               PERFORM VARYING WS-ROOM-CHOICE FROM 1 BY 1
-                       UNTIL WS-ROOM-CHOICE > WS-AVAILABLE-COUNT
-                   *> Format price to remove leading zeros
-                   MOVE WS-AVAILABLE-ROOM-PRICE(WS-ROOM-CHOICE)
-                        TO WS-FORMATTED-PRICE
-                   DISPLAY WS-ROOM-CHOICE ". Room "
-                           WS-AVAILABLE-ROOM-ID(WS-ROOM-CHOICE)
-                           " - " WS-AVAILABLE-ROOM-TYPE(WS-ROOM-CHOICE)
-                           " - Rate: $" WS-FORMATTED-PRICE " per night"
-               END-PERFORM
-            DISPLAY "=================================================="
-               DISPLAY "Enter 0 to return to main menu"
-           END-IF.
-
-       SELECT-ROOM-FOR-WALKIN.
-           DISPLAY "Please select a room (1-" WS-AVAILABLE-COUNT
-                   ") or 0 to cancel: "
-           ACCEPT WS-ROOM-CHOICE
-
-           IF WS-ROOM-CHOICE = 0
-             DISPLAY RED-COLOR "Walk-in check-in cancelled." RESET-COLOR
+           IF WS-AVAILABLE-ROOMS = 0
+               DISPLAY " "
+               DISPLAY RED-COLOR "No available "
+               FUNCTION TRIM(WS-SELECTED-ROOM-TYPE)
+               " rooms found." RESET-COLOR
+               DISPLAY " "
+               DISPLAY "Press ENTER to continue..."
+               ACCEPT WS-DUMMY-INPUT
                MOVE 'N' TO WS-FOUND
-           ELSE IF WS-ROOM-CHOICE >= 1
-               AND WS-ROOM-CHOICE <= WS-AVAILABLE-COUNT
-               MOVE WS-AVAILABLE-ROOM-ID(WS-ROOM-CHOICE) TO WS-ROOM-ID
-             MOVE WS-AVAILABLE-ROOM-TYPE(WS-ROOM-CHOICE) TO WS-ROOM-TYPE
-               MOVE 'Y' TO WS-FOUND
-               DISPLAY GREEN-COLOR "Room " WS-ROOM-ID
-               " selected for your stay." RESET-COLOR
            ELSE
-               DISPLAY RED-COLOR "Invalid selection. Please try again."
-               RESET-COLOR
-               GO TO SELECT-ROOM-FOR-WALKIN
+               DISPLAY " "
+               MOVE WS-AVAILABLE-ROOMS TO WS-ROOM-COUNT-DSP
+               DISPLAY GREEN-COLOR "Found " WS-ROOM-COUNT-DSP
+               " available room(s)." RESET-COLOR
+               DISPLAY " "
+               DISPLAY "Enter 0 to go back to room type selection."
+               MOVE 'Y' TO WS-FOUND
            END-IF.
 
-       GET-WALKIN-CHECKOUT-DATE.
-           DISPLAY "Please enter your checkout date (YYYYMMDD): "
-           ACCEPT WS-CHECKOUT-DATE
+       SELECT-ROOM.
            DISPLAY " "
-           *> Get current date for validation
-           ACCEPT WS-CURRENT-DATE FROM DATE YYYYMMDD
+           DISPLAY "Enter your choice (1-" WS-ROOM-COUNT-DSP
+           " or 0 to go back): "
+           ACCEPT WS-ROOM-SELECTION
 
-           *> Validate checkout date format and value
-           IF WS-CHECKOUT-DATE NOT NUMERIC
-               DISPLAY RED-COLOR
-               "Invalid date format. Please use YYYYMMDD." RESET-COLOR
-               GO TO GET-WALKIN-CHECKOUT-DATE
-           END-IF
+           *> Validate selection
+           IF WS-ROOM-SELECTION = 0
+               *> Go back to room type selection
+               MOVE 'N' TO WS-FOUND
+           ELSE
+               IF WS-ROOM-SELECTION >= 1 AND
+                  WS-ROOM-SELECTION <= WS-AVAILABLE-ROOMS
+                   *> Valid selection - get room info from array
+                   MOVE WS-ROOM-ID-ARRAY(WS-ROOM-SELECTION)
+                        TO WS-ROOM-NUMBER
+                   MOVE WS-ROOM-TYPE-ARRAY(WS-ROOM-SELECTION)
+                        TO WS-ROOM-TYPE
 
-           *> Check if checkout date is after check-in date (today)
-           IF FUNCTION INTEGER-OF-DATE(WS-CHECKOUT-DATE) <=
-              FUNCTION INTEGER-OF-DATE(WS-CURRENT-DATE)
-               DISPLAY RED-COLOR "Check-out date must be after today ("
-                       WS-CURRENT-DATE(1:4) "/"
-                       WS-CURRENT-DATE(5:2) "/"
-                       WS-CURRENT-DATE(7:2) ")." RESET-COLOR
-               DISPLAY RED-COLOR "Please enter a valid checkout date."
-                RESET-COLOR
-               GO TO GET-WALKIN-CHECKOUT-DATE
-           END-IF
+                   *> Verify room is still available
+                   PERFORM VERIFY-ROOM-AVAILABILITY
 
-           *> Additional validation for reasonable date range (max 30 days)
-           IF FUNCTION INTEGER-OF-DATE(WS-CHECKOUT-DATE) -
-              FUNCTION INTEGER-OF-DATE(WS-CURRENT-DATE) > 30
-               DISPLAY RED-COLOR
-               "Checkout date cannot be more than 30 days from today."
-               RESET-COLOR
-               DISPLAY RED-COLOR
-                "Please enter a reasonable checkout date." RESET-COLOR
-               GO TO GET-WALKIN-CHECKOUT-DATE
-           END-IF
+                   IF WS-FOUND = 'Y'
+                       DISPLAY " "
+                       DISPLAY GREEN-COLOR "Room " WS-ROOM-NUMBER
+                               " selected successfully!" RESET-COLOR
+                       DISPLAY "Room Type: " WS-ROOM-TYPE
+                       DISPLAY "Price: "
+            FUNCTION TRIM(WS-ROOM-PRICE-ARRAY(WS-ROOM-SELECTION))
+            "/night"
+                       DISPLAY " "
+                       DISPLAY "Press ENTER to continue..."
+                       ACCEPT WS-DUMMY-INPUT
+                   END-IF
+               ELSE
+                   *> Invalid selection
+                   DISPLAY " "
+                   MOVE WS-AVAILABLE-ROOMS TO WS-ROOM-COUNT-DSP
+                   DISPLAY RED-COLOR "Invalid selection. Please choose "
+                           "a number between 1 and " WS-ROOM-COUNT-DSP
+                           " or 0 to go back." RESET-COLOR
+                   DISPLAY "Press ENTER to continue..."
+                   ACCEPT WS-DUMMY-INPUT
+                   MOVE 'N' TO WS-FOUND
+               END-IF
+           END-IF.
 
-           DISPLAY GREEN-COLOR "Checkout date accepted: "
-            WS-CHECKOUT-DATE(1:4) "/"
-                   WS-CHECKOUT-DATE(5:2) "/" WS-CHECKOUT-DATE(7:2)
-                   RESET-COLOR
-                       DISPLAY " ".
-
-       CREATE-WALKIN-BOOKING.
-           *> Generate booking ID
-           OPEN INPUT BOOKING-FILE
-           MOVE 0 TO WS-BOOKING-ID
-           MOVE 'N' TO WS-EOF
-
-           PERFORM UNTIL WS-EOF = 'Y'
-               READ BOOKING-FILE NEXT
-                   AT END
-                       MOVE 'Y' TO WS-EOF
-                   NOT AT END
-                       IF BOOKING-ID > WS-BOOKING-ID
-                           MOVE BOOKING-ID TO WS-BOOKING-ID
-                       END-IF
-               END-READ
-           END-PERFORM
-           CLOSE BOOKING-FILE
-           ADD 1 TO WS-BOOKING-ID
-
-           *> Get current date for check-in and timestamp
-           ACCEPT WS-CURRENT-DATE FROM DATE YYYYMMDD
-           ACCEPT WS-CURRENT-DATE-DATA FROM DATE YYYYMMDD
-           STRING WS-CURRENT-YEAR
-                  WS-CURRENT-MONTH
-                  WS-CURRENT-DAY
-                  WS-CURRENT-HOURS
-                  WS-CURRENT-MINUTES
-                  WS-CURRENT-SECONDS
-                  DELIMITED BY SIZE
-                  INTO WS-CREATED-AT-TIMESTAMP
-
-           *> Create booking record (walk-in books and checks in same day)
-           OPEN I-O BOOKING-FILE
-           MOVE WS-BOOKING-ID TO BOOKING-ID
-           MOVE WS-ROOM-ID TO ROOM-ID-BK
-           MOVE WS-CUSTOMER-ID TO CUSTOMER-ID-BK
-           MOVE WS-CURRENT-DATE TO CHECKIN-DATE
-           MOVE WS-CHECKOUT-DATE TO CHECKOUT-DATE
-           MOVE 'Active' TO BOOKING-STATUS
-           MOVE 'Y' TO CHEKIN-FLAG        *> Already checked in
-           MOVE 'N' TO CHECKOUT-FLAG
-           MOVE WS-CREATED-AT-TIMESTAMP TO CREATED-AT
-           WRITE BOOKING-RECORD
-           CLOSE BOOKING-FILE
-
-           DISPLAY "====== Walk-in Check In Complete ======"
-           DISPLAY "Booking ID: " WS-BOOKING-ID
-           DISPLAY "Room ID: " WS-ROOM-ID
-           DISPLAY "Room Type: " WS-ROOM-TYPE
-           DISPLAY "Customer ID: " WS-CUSTOMER-ID
-           DISPLAY "Customer Name: " WS-CUSTOMER-NAME
-           DISPLAY "Customer Phone: " WS-CUSTOMER-PHONE
-           DISPLAY "Check-in Date: " WS-CURRENT-DATE(1:4) "/"
-                   WS-CURRENT-DATE(5:2) "/" WS-CURRENT-DATE(7:2)
-           DISPLAY "Check-out Date: " WS-CHECKOUT-DATE(1:4) "/"
-                   WS-CHECKOUT-DATE(5:2) "/" WS-CHECKOUT-DATE(7:2)
-           DISPLAY "==================================================".
-
-
-
-           CHANGE-ROOM-STATUS.
-           OPEN I-O ROOMS-FILE.
-           MOVE 'N' TO WS-FOUND.
-           PERFORM UNTIL WS-FOUND = 'Y'
-               READ ROOMS-FILE NEXT
-                   AT END
-                       EXIT PERFORM
-                   NOT AT END
-                       IF ROOM-ID = ROOM-ID-BK
-                           MOVE 'Y' TO WS-FOUND
-                               MOVE 'Occupied' TO R-STATUS
-                               REWRITE ROOMS-RECORD
-                                   INVALID KEY
-           DISPLAY RED-COLOR
-           "Error: Unable to update room status for "
-            ROOM-ID RESET-COLOR
-                                   NOT INVALID KEY
-           DISPLAY GREEN-COLOR "Room " ROOM-ID
-           " status updated to Occupied." RESET-COLOR
-                               END-REWRITE
-                       END-IF
-               END-READ
-           END-PERFORM.
+       VERIFY-ROOM-AVAILABILITY.
+           *> Double-check that the selected room is still available
+           OPEN INPUT ROOMS-FILE
+           MOVE WS-ROOM-NUMBER TO ROOM-ID
+           READ ROOMS-FILE KEY IS ROOM-ID
+               INVALID KEY
+                   DISPLAY " "
+                   DISPLAY RED-COLOR "Error: Room " WS-ROOM-NUMBER
+                           " not found." RESET-COLOR
+                   DISPLAY "Press ENTER to continue..."
+                   ACCEPT WS-DUMMY-INPUT
+                   MOVE 'N' TO WS-FOUND
+               NOT INVALID KEY
+                   IF R-STATUS = 'Available'
+                       MOVE 'Y' TO WS-FOUND
+                   ELSE
+                       DISPLAY " "
+                       DISPLAY RED-COLOR "Sorry, room " WS-ROOM-NUMBER
+                               " is no longer available." RESET-COLOR
+                       DISPLAY "Press ENTER to continue..."
+                       ACCEPT WS-DUMMY-INPUT
+                       MOVE 'N' TO WS-FOUND
+                   END-IF
+           END-READ
            CLOSE ROOMS-FILE.
 
-       ADD-GUEST-INFORMATION.
-           DISPLAY "=== Guest Information ==="
-           DISPLAY "Do you want to add guest details? (Y/N): "
-           ACCEPT WS-ADD-GUESTS
+       WALKIN-COLLECT-GUEST-INFO.
+           DISPLAY " "
+           DISPLAY "Proceed with guest information collection? (Y/N): "
+           ACCEPT WS-CONFIRMATION
 
-           IF WS-ADD-GUESTS = 'Y' OR WS-ADD-GUESTS = 'y'
-               MOVE ZEROS TO WS-GUEST-COUNT
-               PERFORM ADD-GUEST-DETAILS
+           IF WS-CONFIRMATION = 'Y' OR WS-CONFIRMATION = 'y'
+               MOVE 'Y' TO WS-FOUND
+               *> Determine number of customers based on room type
+               PERFORM WALKIN-DETERMINE-CUSTOMER-COUNT
+               *> Collect guest information for all customers
+               PERFORM COLLECT-ALL-GUEST-INFO
            ELSE
-               DISPLAY "Guest details skipped."
+               MOVE 'N' TO WS-FOUND
+               DISPLAY " "
+               DISPLAY RED-COLOR "Walk-in check-in cancelled."
+               RESET-COLOR
+               DISPLAY " "
+               DISPLAY "Press ENTER to continue..."
+               ACCEPT WS-DUMMY-INPUT
            END-IF.
 
-       ADD-GUEST-DETAILS.
-           DISPLAY "Number of guests staying (maximum 9): "
-           ACCEPT WS-GUEST-COUNT
+       WALKIN-DETERMINE-CUSTOMER-COUNT.
+           DISPLAY CLEAR-SCREEN
+           DISPLAY CYAN-COLOR
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                         GUEST COUNT SETUP         "
+           DISPLAY "==================================================="
+           "============================"
+           RESET-COLOR
+           DISPLAY "                                                   "
+
+           EVALUATE TRUE
+               WHEN WS-ROOM-TYPE = 'Single'
+                   MOVE 1 TO WS-MAX-CUSTOMERS
+                   DISPLAY "                   Single room - 1 guest "
+                   "required.                   "
+
+               WHEN WS-ROOM-TYPE = 'Double'
+                   DISPLAY "           Double room - How many guests (1"
+                   "or 2)?:                    "
+                   ACCEPT WS-CUSTOMER-COUNT
+                   IF WS-CUSTOMER-COUNT = 1 OR WS-CUSTOMER-COUNT = 2
+                       MOVE WS-CUSTOMER-COUNT TO WS-MAX-CUSTOMERS
+                   ELSE
+                       DISPLAY " "
+                       DISPLAY YELLOW-COLOR
+                       "Invalid input. Defaulting t"
+                       "o 1 guest." RESET-COLOR
+                       MOVE 1 TO WS-MAX-CUSTOMERS
+                   END-IF
+
+               WHEN WS-ROOM-TYPE = 'Delux'
+                   DISPLAY "           Delux room - How many guests (1-"
+                   "9)?:"
+                   ACCEPT WS-CUSTOMER-COUNT
+                   IF WS-CUSTOMER-COUNT >= 1 AND WS-CUSTOMER-COUNT <= 9
+                       MOVE WS-CUSTOMER-COUNT TO WS-MAX-CUSTOMERS
+                   ELSE
+                       DISPLAY " "
+                       DISPLAY YELLOW-COLOR "Invalid input. Defaulting "
+                       "to 1 guest." RESET-COLOR
+                       MOVE 1 TO WS-MAX-CUSTOMERS
+                   END-IF
+
+               WHEN OTHER
+                   DISPLAY " "
+                   DISPLAY YELLOW-COLOR "Unknown room type. Defaultin"
+                   "g to 1 guest." RESET-COLOR
+                   MOVE 1 TO WS-MAX-CUSTOMERS
+           END-EVALUATE
+
+           DISPLAY "                                                   "
+           DISPLAY GREEN-COLOR "Collecting information for "
+           WS-MAX-CUSTOMERS " guest(s)." RESET-COLOR
            DISPLAY " "
-           IF WS-GUEST-COUNT > 0 AND WS-GUEST-COUNT <= 9
-               PERFORM VARYING WS-ROOM-CHOICE FROM 1 BY 1
-                       UNTIL WS-ROOM-CHOICE > WS-GUEST-COUNT
-                   DISPLAY "============= Guest "
-                   WS-ROOM-CHOICE " Details ============="
-                   PERFORM COLLECT-GUEST-DATA
-                   PERFORM SAVE-GUEST-RECORD
-               END-PERFORM
-               DISPLAY GREEN-COLOR
-               "Guest information saved successfully." RESET-COLOR
-           ELSE
-             DISPLAY RED-COLOR
-             "Invalid number of guests. Skipping guest details."
-              RESET-COLOR
-           END-IF.
+           DISPLAY "Press ENTER to continue..."
+           ACCEPT WS-DUMMY-INPUT.
 
-       COLLECT-GUEST-DATA.
+       EXECUTE-WALKIN-CHECK-IN.
+           *> Generate next check-in ID
+           PERFORM GENERATE-NEXT-CHECKIN-ID
+
+           *> Get current date and time
+           PERFORM GET-CURRENT-DATETIME
+
+           *> Create check-in record for walk-in (no booking ID)
+           PERFORM CREATE-WALKIN-CHECKIN-RECORD
+
+           *> Process all customer records
+           PERFORM PROCESS-ALL-CUSTOMER-RECORDS
+
+           *> Create staylog records for all guests
+           PERFORM CREATE-ALL-WALKIN-SLREC
+
+           *> Update room status to occupied
+           PERFORM UPDATE-WALKIN-ROOM-TO-OCCUPIED
+
+           DISPLAY CLEAR-SCREEN
+           DISPLAY GREEN-COLOR
+           DISPLAY "==============================================="
+           "================================"
+           DISPLAY "                      WALK-IN CHECK-IN COMPLETED "
+           "SUCCESSFULLY                   "
+           DISPLAY "==============================================="
+           "================================"
+           RESET-COLOR
+           DISPLAY "                                                   "
+           DISPLAY
+           "        Walk-in guest has been successfully checked in!"
+           DISPLAY "                                                   "
+           DISPLAY "==============================================="
+           "================================"
            DISPLAY " "
-           DISPLAY "============= Guest Information============="
-           DISPLAY "Guest name: "
-           ACCEPT WS-GUEST-NAME
+           DISPLAY "Press ENTER to continue..."
+           ACCEPT WS-DUMMY-INPUT.
 
-           DISPLAY "Guest age: "
-           ACCEPT WS-GUEST-AGE
+       CREATE-WALKIN-CHECKIN-RECORD.
+           OPEN I-O CHECKINOUT-FILE
+           MOVE WS-NEXT-CHECKIN-ID TO CHECKIN-ID
+           MOVE 0 TO BOOKING-ID-IO  *> Zero for walk-in
+           MOVE WS-ROOM-NUMBER TO ROOM-ID-IO
+           MOVE WS-CURRENT-DATE TO ACTUAL-CHECKIN-DATE
+           MOVE WS-TIME-FORMATTED TO ACTUAL-CHECKIN-TIME
+           MOVE 'N' TO CHECKOUT-FLAG
+           MOVE 0 TO CHECKOUT-DATE
 
-           DISPLAY "National Registration Card (NRC): "
-           ACCEPT WS-GUEST-NRC
+           WRITE CHECKINOUT-RECORD
+               INVALID KEY
+                   DISPLAY " "
+                   DISPLAY RED-COLOR
+                   "*** ERROR: Unable to create walk-in"
+                   " check-in record. ***" RESET-COLOR
+                   DISPLAY " "
+               NOT INVALID KEY
+                   DISPLAY " "
+                   DISPLAY GREEN-COLOR
+                   "✓ Walk-in check-in record created"
+                   " successfully!" RESET-COLOR
+                   DISPLAY "  Check-in ID: " CHECKIN-ID
+                   DISPLAY "  Room: " ROOM-ID-IO
+                   DISPLAY "  Check-in Date: "
+                   ACTUAL-CHECKIN-DATE(1:4) "/"
+                           ACTUAL-CHECKIN-DATE(5:2) "/"
+                           ACTUAL-CHECKIN-DATE(7:2)
+                   DISPLAY "  Check-in Time: "
+                   ACTUAL-CHECKIN-TIME(1:2) ":"
+                           ACTUAL-CHECKIN-TIME(3:2) ":"
+                           ACTUAL-CHECKIN-TIME(5:2)
+                   DISPLAY " "
+           END-WRITE
+           CLOSE CHECKINOUT-FILE.
 
-           DISPLAY "Gender (M/F): "
-           ACCEPT WS-GUEST-GENDER
+       CREATE-ALL-WALKIN-SLREC.
+           PERFORM VARYING WS-GUEST-IDX FROM 1 BY 1
+                   UNTIL WS-GUEST-IDX > WS-MAX-CUSTOMERS
+               DISPLAY " "
+               DISPLAY "Creating walk-in staylog record "
+                       FUNCTION TRIM(WS-GUEST-IDX)
+                       " of " FUNCTION TRIM(WS-MAX-CUSTOMERS) "..."
 
-           DISPLAY " ".
-           *> Use customer phone as guest phone for simplicity
-           *> In a more complex system, each guest might have their own phone.
+               *> Create the staylog record
+               PERFORM CREATE-WALKIN-STAYLOG-RECORD
+           END-PERFORM.
 
-       SAVE-GUEST-RECORD.
-           *> Generate next guest ID
-           OPEN INPUT GUEST-FILE
-           MOVE 0 TO WS-GUEST-ID
-           MOVE 'N' TO WS-EOF
+       CREATE-WALKIN-STAYLOG-RECORD.
+           *> Generate next staylog ID
+           PERFORM GENERATE-NEXT-STAYLOG-ID
 
-           PERFORM UNTIL WS-EOF = 'Y'
-               READ GUEST-FILE NEXT
-                   AT END
-                       MOVE 'Y' TO WS-EOF
-                   NOT AT END
-                       IF GUEST-ID > WS-GUEST-ID
-                           MOVE GUEST-ID TO WS-GUEST-ID
+           OPEN I-O STAYLOG-FILE
+           MOVE WS-NEXT-STAYLOG-ID TO STAYLOG-ID
+           *> Use the stored customer ID for this guest
+           MOVE WS-GUEST-CUST-ID(WS-GUEST-IDX) TO CUSTOMER-ID-SL
+           MOVE WS-NEXT-CHECKIN-ID TO CHECKIN-ID-SL
+           MOVE 0 TO BOOKING-ID-SL  *> Zero for walk-in
+           MOVE WS-ROOM-NUMBER TO ROOM-ID-SL
+
+           WRITE STAYLOG-RECORD
+               INVALID KEY
+                   DISPLAY
+                   "Error: Unable to create walk-in staylog record."
+               NOT INVALID KEY
+                   DISPLAY
+                   "✓ Walk-in staylog record created successfully!"
+                   DISPLAY "  Staylog ID: " STAYLOG-ID
+                   DISPLAY "  Customer ID: " CUSTOMER-ID-SL
+                   DISPLAY "  Check-in ID: " CHECKIN-ID-SL
+           END-WRITE
+           CLOSE STAYLOG-FILE.
+
+       UPDATE-WALKIN-ROOM-TO-OCCUPIED.
+           OPEN I-O ROOMS-FILE
+           MOVE WS-ROOM-NUMBER TO ROOM-ID
+           READ ROOMS-FILE KEY IS ROOM-ID
+               INVALID KEY
+                   DISPLAY
+                   "Warning: Could not find room " WS-ROOM-NUMBER
+               NOT INVALID KEY
+                   MOVE 'Occupied' TO R-STATUS
+                   REWRITE ROOMS-RECORD
+                       INVALID KEY
+                          DISPLAY "Error: Unable to update room status."
+                       NOT INVALID KEY
+                           DISPLAY "✓ Room " WS-ROOM-NUMBER
+                                   " status updated to Occupied."
+                   END-REWRITE
+           END-READ
+           CLOSE ROOMS-FILE.
+
+       GET-VALID-NAME.
+           MOVE 'N' TO WS-VALIDATION-PASSED
+           PERFORM UNTIL WS-VALIDATION-PASSED = 'Y'
+               DISPLAY "Guest Name (2-20 characters, letters only): "
+               ACCEPT WS-TEMP-INPUT
+
+               *> Check if input is not empty and within length limits
+               IF FUNCTION LENGTH(FUNCTION TRIM(WS-TEMP-INPUT)) >= 2 AND
+                  FUNCTION LENGTH(FUNCTION TRIM(WS-TEMP-INPUT)) <= 20
+                   *> Validate that name contains only letters and spaces
+                   PERFORM VALIDATE-NAME-CHARACTERS
+                   IF WS-INPUT-VALID = 'Y'
+                       MOVE FUNCTION TRIM(WS-TEMP-INPUT)
+                            TO WS-GUEST-NAME-T(WS-GUEST-IDX)
+                       MOVE 'Y' TO WS-VALIDATION-PASSED
+                   ELSE
+                       DISPLAY " "
+                       DISPLAY RED-COLOR
+                       "Invalid name. Use only letters and spaces."
+                       RESET-COLOR
+                       DISPLAY " "
+                   END-IF
+               ELSE
+                   DISPLAY " "
+                   DISPLAY RED-COLOR
+                   "Invalid length. Name must be 2-20 characters."
+                   RESET-COLOR
+                   DISPLAY " "
+               END-IF
+           END-PERFORM.
+
+       VALIDATE-NAME-CHARACTERS.
+           MOVE 'Y' TO WS-INPUT-VALID
+           MOVE FUNCTION LENGTH(FUNCTION TRIM(WS-TEMP-INPUT))
+                TO WS-CHAR-COUNT
+
+           PERFORM VARYING WS-LOOP-COUNTER FROM 1 BY 1
+                   UNTIL WS-LOOP-COUNTER > WS-CHAR-COUNT
+               MOVE WS-TEMP-INPUT(WS-LOOP-COUNTER:1) TO WS-CHAR-CHECK
+               IF WS-CHAR-CHECK NOT ALPHABETIC AND
+                  WS-CHAR-CHECK NOT = SPACE
+                   MOVE 'N' TO WS-INPUT-VALID
+                   MOVE WS-CHAR-COUNT TO WS-LOOP-COUNTER
+               END-IF
+           END-PERFORM.
+
+       GET-VALID-PHONE.
+           MOVE 'N' TO WS-VALIDATION-PASSED
+           PERFORM UNTIL WS-VALIDATION-PASSED = 'Y'
+               DISPLAY "Guest Phone (10-15 digits): "
+               ACCEPT WS-TEMP-INPUT
+
+               *> Check if input length is valid
+              IF FUNCTION LENGTH(FUNCTION TRIM(WS-TEMP-INPUT)) >= 10 AND
+                  FUNCTION LENGTH(FUNCTION TRIM(WS-TEMP-INPUT)) <= 15
+                   *> Validate that phone contains only digits
+                   PERFORM VALIDATE-PHONE-CHARACTERS
+                   IF WS-INPUT-VALID = 'Y'
+                       MOVE FUNCTION TRIM(WS-TEMP-INPUT)
+                            TO WS-GUEST-PHONE-T(WS-GUEST-IDX)
+                       MOVE 'Y' TO WS-VALIDATION-PASSED
+                   ELSE
+                       DISPLAY " "
+                       DISPLAY RED-COLOR
+                       "Invalid phone. Use only digits (0-9)."
+                       RESET-COLOR
+                       DISPLAY " "
+                   END-IF
+               ELSE
+                   DISPLAY " "
+                   DISPLAY RED-COLOR
+                   "Invalid length. Phone must be 10-15 digits."
+                   RESET-COLOR
+                   DISPLAY " "
+               END-IF
+           END-PERFORM.
+
+       VALIDATE-PHONE-CHARACTERS.
+           MOVE 'Y' TO WS-INPUT-VALID
+           MOVE FUNCTION LENGTH(FUNCTION TRIM(WS-TEMP-INPUT))
+                TO WS-CHAR-COUNT
+
+           PERFORM VARYING WS-LOOP-COUNTER FROM 1 BY 1
+                   UNTIL WS-LOOP-COUNTER > WS-CHAR-COUNT
+               MOVE WS-TEMP-INPUT(WS-LOOP-COUNTER:1) TO WS-CHAR-CHECK
+               IF WS-CHAR-CHECK NOT NUMERIC
+                   MOVE 'N' TO WS-INPUT-VALID
+                   MOVE WS-CHAR-COUNT TO WS-LOOP-COUNTER
+               END-IF
+           END-PERFORM.
+
+       GET-VALID-GENDER.
+           MOVE 'N' TO WS-VALIDATION-PASSED
+           PERFORM UNTIL WS-VALIDATION-PASSED = 'Y'
+               DISPLAY "Guest Gender (M/F): "
+               ACCEPT WS-CHAR-CHECK
+
+               EVALUATE FUNCTION UPPER-CASE(WS-CHAR-CHECK)
+                   WHEN 'M'
+                       MOVE 'M' TO WS-GUEST-GENDER-T(WS-GUEST-IDX)
+                       MOVE 'Y' TO WS-VALIDATION-PASSED
+                   WHEN 'F'
+                       MOVE 'F' TO WS-GUEST-GENDER-T(WS-GUEST-IDX)
+                       MOVE 'Y' TO WS-VALIDATION-PASSED
+                   WHEN OTHER
+                       DISPLAY " "
+                       DISPLAY RED-COLOR
+                       "Invalid gender. Please enter M or F."
+                       RESET-COLOR
+                       DISPLAY " "
+               END-EVALUATE
+           END-PERFORM.
+
+       GET-VALID-NRC.
+           *> Check if guest is 18 or older
+           IF WS-GUEST-AGE-T(WS-GUEST-IDX) >= 18
+               DISPLAY " "
+               DISPLAY YELLOW-COLOR
+               "Guest is 18 or older - NRC is required."
+               RESET-COLOR
+               DISPLAY " "
+
+               MOVE 'N' TO WS-VALIDATION-PASSED
+               PERFORM UNTIL WS-VALIDATION-PASSED = 'Y'
+                   DISPLAY "NRC Number (format: 12/LLLLLL(L)123456): "
+                   ACCEPT WS-TEMP-INPUT
+
+                   *> Check if NRC is provided and has minimum length
+             IF FUNCTION LENGTH(FUNCTION TRIM(WS-TEMP-INPUT)) >= 10 AND
+                     FUNCTION LENGTH(FUNCTION TRIM(WS-TEMP-INPUT)) <= 25
+                       *> Basic format validation
+                       PERFORM VALIDATE-NRC-FORMAT
+                       IF WS-INPUT-VALID = 'Y'
+                           MOVE FUNCTION TRIM(WS-TEMP-INPUT)
+                                TO WS-GUEST-NRC-T(WS-GUEST-IDX)
+                           MOVE 'Y' TO WS-VALIDATION-PASSED
+                       ELSE
+                           DISPLAY " "
+                           DISPLAY RED-COLOR
+                        "Invalid NRC format. Please check and re-enter."
+                           RESET-COLOR
+                           DISPLAY " "
                        END-IF
-               END-READ
-           END-PERFORM
-           CLOSE GUEST-FILE
-           ADD 1 TO WS-GUEST-ID
+                   ELSE
+                       DISPLAY " "
+                       DISPLAY RED-COLOR
+                    "NRC too short or too long. Please enter valid NRC."
+                       RESET-COLOR
+                       DISPLAY " "
+                   END-IF
+               END-PERFORM
+           ELSE
+               *> Guest is under 18, NRC is optional
+               DISPLAY " "
+               DISPLAY CYAN-COLOR
+               "Guest is under 18 - NRC is optional."
+               RESET-COLOR
+               DISPLAY "NRC Number (optional, press ENTER to skip): "
+               ACCEPT WS-TEMP-INPUT
 
-           *> Create guest record
-           OPEN I-O GUEST-FILE
-           MOVE WS-GUEST-ID TO GUEST-ID
-           MOVE WS-GUEST-NAME TO GUEST-NAME
-           MOVE WS-GUEST-AGE TO GUEST-AGE
-           MOVE WS-GUEST-NRC TO GUEST-NRC
-           MOVE WS-GUEST-GENDER TO GUEST-GENDER
-           WRITE GUEST-RECORD
-           CLOSE GUEST-FILE
+               IF FUNCTION TRIM(WS-TEMP-INPUT) = SPACES
+                   MOVE "N/A" TO WS-GUEST-NRC-T(WS-GUEST-IDX)
+               ELSE
+                   *> If provided, validate it
+                  IF FUNCTION LENGTH(FUNCTION TRIM(WS-TEMP-INPUT)) >= 10
+                       PERFORM VALIDATE-NRC-FORMAT
+                       IF WS-INPUT-VALID = 'Y'
+                           MOVE FUNCTION TRIM(WS-TEMP-INPUT)
+                                TO WS-GUEST-NRC-T(WS-GUEST-IDX)
+                       ELSE
+                           DISPLAY " "
+                           DISPLAY YELLOW-COLOR
+                           "Invalid NRC format. Setting to N/A."
+                           RESET-COLOR
+                           MOVE "N/A" TO WS-GUEST-NRC-T(WS-GUEST-IDX)
+                       END-IF
+                   ELSE
+                       DISPLAY " "
+                       DISPLAY YELLOW-COLOR
+                       "NRC too short. Setting to N/A."
+                       RESET-COLOR
+                       MOVE "N/A" TO WS-GUEST-NRC-T(WS-GUEST-IDX)
+                   END-IF
+               END-IF
+           END-IF.
 
-           DISPLAY "Guest " FUNCTION TRIM(WS-GUEST-NAME)
-                   " (ID: " WS-GUEST-ID
-                   ", Age: " WS-GUEST-AGE
-                   ", NRC: " FUNCTION TRIM(WS-GUEST-NRC)
-                   ", Gender: " WS-GUEST-GENDER
-                   ") added successfully."
-           DISPLAY " ".
+       VALIDATE-NRC-FORMAT.
+           *> Basic NRC format validation
+           *> This is a simplified validation - you can enhance as needed
+           MOVE 'Y' TO WS-INPUT-VALID
 
+           *> Check if it contains some digits and some letters
+           MOVE 0 TO WS-CHAR-COUNT
+           MOVE FUNCTION LENGTH(FUNCTION TRIM(WS-TEMP-INPUT))
+                TO WS-LOOP-COUNTER
+
+           *> Simple check: NRC should contain both numbers and letters
+           PERFORM VARYING WS-CHAR-COUNT FROM 1 BY 1
+                   UNTIL WS-CHAR-COUNT > WS-LOOP-COUNTER
+               MOVE WS-TEMP-INPUT(WS-CHAR-COUNT:1) TO WS-CHAR-CHECK
+               *> Allow digits, letters, parentheses, and forward slash
+               IF WS-CHAR-CHECK NOT NUMERIC AND
+                  WS-CHAR-CHECK NOT ALPHABETIC AND
+                  WS-CHAR-CHECK NOT = '/' AND
+                  WS-CHAR-CHECK NOT = '(' AND
+                  WS-CHAR-CHECK NOT = ')'
+                   MOVE 'N' TO WS-INPUT-VALID
+                   MOVE WS-LOOP-COUNTER TO WS-CHAR-COUNT
+               END-IF
+           END-PERFORM.
        END PROGRAM checkIn.
