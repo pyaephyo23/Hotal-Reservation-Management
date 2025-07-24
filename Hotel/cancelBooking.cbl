@@ -1,4 +1,4 @@
-      ******************************************************************
+******************************************************************
       * Author:
       * Date:
       * Purpose:
@@ -13,11 +13,6 @@
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS ROOM-ID.
-           SELECT CUSTOMER-FILE ASSIGN TO '../DATA/CUSTOMERS.DAT'
-               ORGANIZATION IS INDEXED
-               ACCESS MODE IS DYNAMIC
-               RECORD KEY IS CUSTOMER-ID
-               ALTERNATE RECORD KEY IS CUSTOMER-NAME WITH DUPLICATES.
            SELECT BOOKING-FILE ASSIGN TO '../DATA/BOOKINGS.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
@@ -27,16 +22,12 @@
        FD  ROOMS-FILE.
        COPY "./CopyBooks/ROOMS.cpy".
 
-       FD CUSTOMER-FILE.
-       COPY "./CopyBooks/CUSTOMERS.cpy".
-
        FD  BOOKING-FILE.
        COPY "./CopyBooks/BOOKINGS.cpy".
 
        WORKING-STORAGE SECTION.
        01 WS-CHOICE          PIC 9.
        01 WS-BOOKING-ID      PIC 9(5).
-       01 WS-CUSTOMER-ID     PIC 9(5).
        01 WS-CUSTOMER-PHONE  PIC X(15).
        01 WS-ROOM-ID         PIC X(5).
        01 WS-FOUND           PIC X VALUE 'N'.
@@ -49,28 +40,59 @@
            05 WS-FOUND-BOOKING-ID   PIC 9(5).
            05 WS-FOUND-ROOM-ID      PIC X(5).
            05 WS-FOUND-CHECKIN-DATE PIC 9(8).
-           05 WS-FOUND-CHECKOUT-DATE PIC 9(8).
+           05 WS-FOUND-CUSTOMER-NAME PIC X(30).
 
-       *> Color codes for display
+       *> Color codes for display - ANSI escape sequences
        01 RED-COLOR          PIC X(8) VALUE X"1B5B33316D".
        01 GREEN-COLOR        PIC X(8) VALUE X"1B5B33326D".
        01 RESET-COLOR        PIC X(4) VALUE X"1B5B306D".
+       01 BLUE-COLOR         PIC X(8) VALUE X"1B5B33346D".
+       01 YELLOW-COLOR       PIC X(8) VALUE X"1B5B33336D".
+       01 CYAN-COLOR         PIC X(8) VALUE X"1B5B33366D".
 
-
+       *> Screen formatting
+       01 CLEAR-SCREEN       PIC X(4) VALUE X"1B5B324A".
+       01 WS-DUMMY-INPUT     PIC X.
 
        LINKAGE SECTION.
        01 LINK PIC 9.
        PROCEDURE DIVISION USING LINK.
        MAIN-PROCEDURE.
-           DISPLAY "**************************************************"
-           DISPLAY "1. Cancel Booking By Phone Number"
-           DISPLAY "2. Cancel All Expired Bookings (Past Check-in Date)"
-           DISPLAY "9. Go Back"
-           DISPLAY "**************************************************"
+           DISPLAY CLEAR-SCREEN
+           DISPLAY BLUE-COLOR
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                           BOOKING CANCELLATION SY"
+           "STEM                       "
+           DISPLAY "==================================================="
+           "============================"
+           RESET-COLOR
+           DISPLAY "                                                   "
+           DISPLAY "                    1. Cancel Booking By Phone Num"
+           "ber                    "
+           DISPLAY "                    2. Cancel All Expired Bookings"
+           " (Past Check-in Date)      "
+           DISPLAY "                    9. Go Back                     "
+           DISPLAY "                                                   "
+           DISPLAY "==================================================="
+           "============================"
            ACCEPT WS-CHOICE
            EVALUATE WS-CHOICE
                WHEN 1
-                   DISPLAY "Enter Customer Phone Number"
+                   DISPLAY CLEAR-SCREEN
+                   DISPLAY CYAN-COLOR
+                   DISPLAY "==========================================="
+                   "========"
+                   "============================"
+                   DISPLAY "                      CANCEL BOOKING BY PHO"
+                   "NE     "
+                   DISPLAY "==========================================="
+                   "========"
+                   "============================"
+                   RESET-COLOR
+                   DISPLAY "                            "
+
+                   DISPLAY "Enter Customer Phone Number: "
                    ACCEPT WS-CUSTOMER-PHONE
                    PERFORM CANCEL-BOOKING-BY-PHONE
                    GO TO MAIN-PROCEDURE
@@ -80,22 +102,25 @@
                WHEN 9
                    GOBACK
                WHEN OTHER
-                   DISPLAY RED-COLOR "Invalid selection." RESET-COLOR
+                   DISPLAY " "
+                   DISPLAY RED-COLOR "*** ERROR: Invalid selection. Ple"
+                   "as"
+                   "e choose 1, 2, or 9. ***" RESET-COLOR
+                   DISPLAY " "
+                   DISPLAY "Press ENTER to continue..."
+                   ACCEPT WS-DUMMY-INPUT
                    GO TO MAIN-PROCEDURE
            END-EVALUATE.
        CANCEL-BOOKING-BY-PHONE.
-           *> First find customer by phone number
-           PERFORM FIND-CUSTOMER-BY-PHONE
-           IF WS-FOUND = 'N'
-               DISPLAY "No customer found with phone number: "
-                       WS-CUSTOMER-PHONE
-               EXIT PARAGRAPH
-           END-IF
-
-           *> Find active bookings for this customer
-           PERFORM FIND-ACTIVE-BOOKINGS
+           *> Find active bookings for this phone number
+           PERFORM FIND-ACTIVE-BOOKINGS-BY-PHONE
            IF WS-BOOKING-COUNT = 0
-               DISPLAY "No active bookings found for this customer."
+               DISPLAY " "
+               DISPLAY RED-COLOR "No active bookings found for phone nu"
+               "mber: " WS-CUSTOMER-PHONE RESET-COLOR
+               DISPLAY " "
+               DISPLAY "Press ENTER to continue..."
+               ACCEPT WS-DUMMY-INPUT
                EXIT PARAGRAPH
            END-IF
 
@@ -103,75 +128,63 @@
            PERFORM DISPLAY-CUSTOMER-BOOKINGS
            PERFORM SELECT-BOOKING-TO-CANCEL.
 
-       FIND-CUSTOMER-BY-PHONE.
-           MOVE 'N' TO WS-FOUND
-           MOVE 'N' TO WS-EOF
-
-           OPEN INPUT CUSTOMER-FILE
-           PERFORM UNTIL WS-EOF = 'Y'
-               READ CUSTOMER-FILE NEXT
-                   AT END
-                       MOVE 'Y' TO WS-EOF
-                   NOT AT END
-                       IF CUSTOMER-PHONE = WS-CUSTOMER-PHONE
-                           MOVE CUSTOMER-ID TO WS-CUSTOMER-ID
-                           MOVE 'Y' TO WS-FOUND
-                           DISPLAY "Customer found: " CUSTOMER-NAME
-                           MOVE 'Y' TO WS-EOF
-                       END-IF
-               END-READ
-           END-PERFORM
-           CLOSE CUSTOMER-FILE.
-
-       FIND-ACTIVE-BOOKINGS.
+       FIND-ACTIVE-BOOKINGS-BY-PHONE.
            MOVE 0 TO WS-BOOKING-COUNT
            MOVE 'N' TO WS-EOF
 
            OPEN INPUT BOOKING-FILE
            PERFORM UNTIL WS-EOF = 'Y'
-               READ BOOKING-FILE NEXT
-                   AT END
-                       MOVE 'Y' TO WS-EOF
-                   NOT AT END
-                       IF CUSTOMER-ID-BK = WS-CUSTOMER-ID
-                          AND BOOKING-STATUS = 'Active'
-                          AND CHEKIN-FLAG = 'N'
-                           ADD 1 TO WS-BOOKING-COUNT
-                           IF WS-BOOKING-COUNT <= 20
-                               MOVE BOOKING-ID TO
-                                   WS-FOUND-BOOKING-ID(WS-BOOKING-COUNT)
-                               MOVE ROOM-ID-BK TO
-                                   WS-FOUND-ROOM-ID(WS-BOOKING-COUNT)
-                               MOVE CHECKIN-DATE TO
-                                 WS-FOUND-CHECKIN-DATE(WS-BOOKING-COUNT)
-                               MOVE CHECKOUT-DATE TO
-                                WS-FOUND-CHECKOUT-DATE(WS-BOOKING-COUNT)
-                           END-IF
+           READ BOOKING-FILE NEXT
+               AT END
+                   MOVE 'Y' TO WS-EOF
+               NOT AT END
+                   IF CUSTOMER-PH-BK = WS-CUSTOMER-PHONE
+                     AND BOOKING-STATUS = 'Active'
+                       ADD 1 TO WS-BOOKING-COUNT
+                       IF WS-BOOKING-COUNT <= 20
+                           MOVE BOOKING-ID TO
+                               WS-FOUND-BOOKING-ID(WS-BOOKING-COUNT)
+                           MOVE ROOM-ID-BK TO
+                               WS-FOUND-ROOM-ID(WS-BOOKING-COUNT)
+                           MOVE CHECKIN-DATE TO
+                             WS-FOUND-CHECKIN-DATE(WS-BOOKING-COUNT)
+                           MOVE CUSTOMER-NAME-BK TO
+                             WS-FOUND-CUSTOMER-NAME(WS-BOOKING-COUNT)
                        END-IF
-               END-READ
+                   END-IF
+           END-READ
            END-PERFORM
            CLOSE BOOKING-FILE.
 
        DISPLAY-CUSTOMER-BOOKINGS.
-           DISPLAY "Active bookings for this customer:"
-           DISPLAY "=================================================="
+           DISPLAY CLEAR-SCREEN
+           DISPLAY YELLOW-COLOR
+           DISPLAY "==================================================="
+           "==========================="
+           DISPLAY "                    ACTIVE BOOKINGS FOR "
+           WS-CUSTOMER-PHONE
+           DISPLAY "==================================================="
+           "==========================="
+           RESET-COLOR
            PERFORM VARYING WS-BOOKING-CHOICE FROM 1 BY 1
                    UNTIL WS-BOOKING-CHOICE > WS-BOOKING-COUNT
-               DISPLAY WS-BOOKING-CHOICE ". Booking ID: "
+               DISPLAY "  " WS-BOOKING-CHOICE ". Booking ID: "
                        WS-FOUND-BOOKING-ID(WS-BOOKING-CHOICE)
                        " | Room: "
                        WS-FOUND-ROOM-ID(WS-BOOKING-CHOICE)
-               DISPLAY "   Check-in: "
+               DISPLAY "     Customer: "
+                       WS-FOUND-CUSTOMER-NAME(WS-BOOKING-CHOICE)
+               DISPLAY "     Check-in: "
                    WS-FOUND-CHECKIN-DATE(WS-BOOKING-CHOICE)(1:4) "/"
                    WS-FOUND-CHECKIN-DATE(WS-BOOKING-CHOICE)(5:2) "/"
                    WS-FOUND-CHECKIN-DATE(WS-BOOKING-CHOICE)(7:2)
-                       " | Check-out: "
-                   WS-FOUND-CHECKOUT-DATE(WS-BOOKING-CHOICE)(1:4) "/"
-                   WS-FOUND-CHECKOUT-DATE(WS-BOOKING-CHOICE)(5:2) "/"
-                   WS-FOUND-CHECKOUT-DATE(WS-BOOKING-CHOICE)(7:2)
+               DISPLAY " "
            END-PERFORM
-           DISPLAY "=================================================="
-           DISPLAY "Enter 0 to cancel operation".
+           DISPLAY "==================================================="
+           "==========================="
+           DISPLAY "                           0. Cancel operation     "
+           DISPLAY "==================================================="
+           "===========================".
 
        SELECT-BOOKING-TO-CANCEL.
            DISPLAY "Select booking to cancel (1-" WS-BOOKING-COUNT
@@ -179,14 +192,24 @@
            ACCEPT WS-BOOKING-CHOICE
 
            IF WS-BOOKING-CHOICE = 0
-               DISPLAY "Cancellation operation cancelled by user."
+               DISPLAY " "
+               DISPLAY RED-COLOR "Cancellation operation cancelled by u"
+               "ser." RESET-COLOR
+               DISPLAY " "
+               DISPLAY "Press ENTER to continue..."
+               ACCEPT WS-DUMMY-INPUT
            ELSE IF WS-BOOKING-CHOICE >= 1
                AND WS-BOOKING-CHOICE <= WS-BOOKING-COUNT
                MOVE WS-FOUND-BOOKING-ID(WS-BOOKING-CHOICE)
                    TO WS-BOOKING-ID
                PERFORM CANCEL-BOOKING-PROCESS
            ELSE
-               DISPLAY "Invalid choice. Please try again."
+               DISPLAY " "
+               DISPLAY RED-COLOR "*** ERROR: Invalid choice. Please tr"
+               "y again. ***" RESET-COLOR
+               DISPLAY " "
+               DISPLAY "Press ENTER to continue..."
+               ACCEPT WS-DUMMY-INPUT
                GO TO SELECT-BOOKING-TO-CANCEL
            END-IF.
 
@@ -196,23 +219,44 @@
            MOVE WS-BOOKING-ID TO BOOKING-ID
            READ BOOKING-FILE KEY IS BOOKING-ID
                INVALID KEY
-                   DISPLAY "Invalid Booking ID."
+                   DISPLAY " "
+                   DISPLAY RED-COLOR "*** ERROR: Invalid Booking ID. *"
+                   "**"
+                   RESET-COLOR
+                   DISPLAY " "
+                   DISPLAY "Press ENTER to continue..."
+                   ACCEPT WS-DUMMY-INPUT
                    CLOSE BOOKING-FILE
                    EXIT PARAGRAPH
                NOT INVALID KEY
-                   IF BOOKING-STATUS = 'Active' AND CHEKIN-FLAG ='N'
+                   IF BOOKING-STATUS = 'Active'
                        MOVE "Cancelled" TO BOOKING-STATUS
                        MOVE ROOM-ID-BK TO WS-ROOM-ID
                        REWRITE BOOKING-RECORD
                            INVALID KEY
-                     DISPLAY "Error: Unable to rewrite booking record."
+                               DISPLAY " "
+                               DISPLAY RED-COLOR "*** ERROR: Unable to "
+                               "rewrite booking record. ***" RESET-COLOR
+                               DISPLAY " "
+                               DISPLAY "Press ENTER to continue..."
+                               ACCEPT WS-DUMMY-INPUT
                            NOT INVALID KEY
-                    DISPLAY GREEN-COLOR "Booking ID " WS-BOOKING-ID 
-                    " is Cancelled." RESET-COLOR
+                               DISPLAY " "
+                               DISPLAY GREEN-COLOR "Booking ID "
+                               WS-BOOKING-ID " successfully cancelled."
+                               RESET-COLOR
+                               DISPLAY " "
+                               DISPLAY "Press ENTER to continue..."
+                               ACCEPT WS-DUMMY-INPUT
                        END-REWRITE
                        MOVE 'Y' TO WS-FOUND
                    ELSE
-                       DISPLAY "Booking is not Active."
+                       DISPLAY " "
+                       DISPLAY YELLOW-COLOR "Booking is not Active."
+                       RESET-COLOR
+                       DISPLAY " "
+                       DISPLAY "Press ENTER to continue..."
+                       ACCEPT WS-DUMMY-INPUT
                        MOVE 'Y' TO WS-FOUND
                    END-IF
            END-READ
@@ -227,30 +271,26 @@
            MOVE WS-ROOM-ID to ROOM-ID
            READ ROOMS-FILE KEY IS ROOM-ID
                INVALID KEY
-                   DISPLAY "Associated Room not found."
+                   DISPLAY " "
+                   DISPLAY YELLOW-COLOR "Associated Room not found."
+                   RESET-COLOR
+                   DISPLAY " "
                NOT INVALID KEY
-                   *> Initialize ACTIVE-BOOKING-COUNT if it contains non-numeric data
-                   IF ACTIVE-BOOKING-COUNT NOT NUMERIC
-                       MOVE ZERO TO ACTIVE-BOOKING-COUNT
-                   END-IF
-
-                   *> Decrease active booking count (with bounds checking)
-                   IF ACTIVE-BOOKING-COUNT > 0
-                       SUBTRACT 1 FROM ACTIVE-BOOKING-COUNT
-                   END-IF
-
-                   *> Update room status based on remaining active bookings
-                   IF ACTIVE-BOOKING-COUNT = 0
-                       MOVE "Available" TO R-STATUS
-                   END-IF
+                   *> Set room status to Available when booking is cancelled
+                   MOVE "Available" TO R-STATUS
 
                    REWRITE ROOMS-RECORD
                        INVALID KEY
-                         DISPLAY "Error: Unable to rewrite room record."
+                           DISPLAY " "
+                           DISPLAY RED-COLOR "*** ERROR: Unable to re"
+                           "write room record. ***" RESET-COLOR
+                           DISPLAY " "
                        NOT INVALID KEY
+                           DISPLAY " "
                            DISPLAY GREEN-COLOR "Room ID " WS-ROOM-ID
-                                   " updated. Active bookings: "
-                                   ACTIVE-BOOKING-COUNT RESET-COLOR
+                                   " status updated to Available."
+                                   RESET-COLOR
+                           DISPLAY " "
                    END-REWRITE
            END-READ
            CLOSE ROOMS-FILE.
@@ -260,8 +300,17 @@
            MOVE 0 TO WS-CANCELLED-COUNT
            MOVE 'N' TO WS-EOF
 
-           DISPLAY "Checking for expired bookings..."
-           DISPLAY "Current date: " WS-CURRENT-DATE(1:4) "/"
+           DISPLAY CLEAR-SCREEN
+           DISPLAY CYAN-COLOR
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                      CANCEL EXPIRED BOOKINGS     "
+           DISPLAY "==================================================="
+           "============================"
+           RESET-COLOR
+           DISPLAY "                                                   "
+           DISPLAY "  Checking for expired bookings..."
+           DISPLAY "  Current date: " WS-CURRENT-DATE(1:4) "/"
                    WS-CURRENT-DATE(5:2) "/" WS-CURRENT-DATE(7:2)
            DISPLAY " "
 
@@ -274,14 +323,16 @@
            END-READ
 
            PERFORM UNTIL WS-EOF = 'Y'
-               *> Check if booking is active, not checked in, and past check-in date
-             IF BOOKING-STATUS = 'Active'AND CHEKIN-FLAG = 'N'
-             AND CHECKIN-DATE < WS-CURRENT-DATE
+               *> Check if booking is active and past check-in date
+               IF BOOKING-STATUS = 'Active'
+                  AND CHECKIN-DATE < WS-CURRENT-DATE
 
-                   DISPLAY "Cancelling expired booking:"
-                   DISPLAY "  Booking ID: " BOOKING-ID
-                   DISPLAY "  Room: " ROOM-ID-BK
-                   DISPLAY "  Check-in Date: " CHECKIN-DATE(1:4) "/"
+                   DISPLAY YELLOW-COLOR "Cancelling expired booking:"
+                   RESET-COLOR
+                   DISPLAY "    Booking ID: " BOOKING-ID
+                   DISPLAY "    Room: " ROOM-ID-BK
+                   DISPLAY "    Customer: " CUSTOMER-NAME-BK
+                   DISPLAY "    Check-in Date: " CHECKIN-DATE(1:4) "/"
                            CHECKIN-DATE(5:2) "/" CHECKIN-DATE(7:2)
 
                    *> Cancel the booking
@@ -289,12 +340,12 @@
                    MOVE ROOM-ID-BK TO WS-ROOM-ID
                    REWRITE BOOKING-RECORD
                        INVALID KEY
-                           DISPLAY "  Error: Unable to cancel booking "
-                           BOOKING-ID
+                           DISPLAY "    " RED-COLOR "Error: Unable to "
+                           "cancel booking " BOOKING-ID RESET-COLOR
                        NOT INVALID KEY
                            ADD 1 TO WS-CANCELLED-COUNT
-                           DISPLAY "  Successfully cancelled booking "
-                           BOOKING-ID
+                           DISPLAY "    " GREEN-COLOR "Successfully "
+                           "cancelled booking " BOOKING-ID RESET-COLOR
                            *> Update the associated room
                            PERFORM UPDATE-ROOM-FOR-CANCELLATION
                    END-REWRITE
@@ -309,12 +360,19 @@
 
            DISPLAY " "
            IF WS-CANCELLED-COUNT = 0
-               DISPLAY "No expired bookings found to cancel."
+               DISPLAY YELLOW-COLOR "No expired bookings found to cance"
+               "l."
+               RESET-COLOR
            ELSE
-               DISPLAY "Expired bookings cancellation completed."
-               DISPLAY "Total bookings cancelled: " WS-CANCELLED-COUNT
+               DISPLAY GREEN-COLOR "Expired bookings cancellation compl"
+               "e"
+               "ted." RESET-COLOR
+               DISPLAY GREEN-COLOR "Total bookings cancelled: "
+               WS-CANCELLED-COUNT RESET-COLOR
            END-IF
-           DISPLAY " ".
+           DISPLAY " "
+           DISPLAY "Press ENTER to continue..."
+           ACCEPT WS-DUMMY-INPUT.
 
        UPDATE-ROOM-FOR-CANCELLATION.
            OPEN I-O ROOMS-FILE
@@ -322,32 +380,20 @@
            MOVE WS-ROOM-ID TO ROOM-ID
            READ ROOMS-FILE KEY IS ROOM-ID
                INVALID KEY
-                   DISPLAY "  Warning: Associated room "
-                   WS-ROOM-ID " not found."
+                   DISPLAY "    " YELLOW-COLOR "Warning: Associated "
+                   "room " WS-ROOM-ID " not found." RESET-COLOR
                NOT INVALID KEY
-                   *> Initialize ACTIVE-BOOKING-COUNT if it contains non-numeric data
-                   IF ACTIVE-BOOKING-COUNT NOT NUMERIC
-                       MOVE ZERO TO ACTIVE-BOOKING-COUNT
-                   END-IF
-
-                   *> Decrease active booking count (with bounds checking)
-                   IF ACTIVE-BOOKING-COUNT > 0
-                       SUBTRACT 1 FROM ACTIVE-BOOKING-COUNT
-                   END-IF
-
-                   *> Update room status based on remaining active bookings
-                   IF ACTIVE-BOOKING-COUNT = 0
-                       MOVE "Available" TO R-STATUS
-                   END-IF
+                   *> Set room status to Available when booking is cancelled
+                   MOVE "Available" TO R-STATUS
 
                    REWRITE ROOMS-RECORD
                        INVALID KEY
-                           DISPLAY "  Error: Unable to update room "
-                           WS-ROOM-ID
+                           DISPLAY "    " RED-COLOR "Error: Unable to "
+                           "update room " WS-ROOM-ID RESET-COLOR
                        NOT INVALID KEY
-                           DISPLAY "  Updated room " WS-ROOM-ID
-                                   " - Active bookings: "
-                                   ACTIVE-BOOKING-COUNT
+                           DISPLAY "    " GREEN-COLOR "Updated room "
+                           WS-ROOM-ID " status to Available."
+                           RESET-COLOR
                    END-REWRITE
            END-READ
 

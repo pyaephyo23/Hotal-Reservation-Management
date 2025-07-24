@@ -36,10 +36,17 @@
        01  WS-CUSTOMER-NAME-UPPER  PIC X(20).
        01  WS-BOOKING-COUNT        PIC 999 VALUE 0.
 
-       *> Color codes for display
+       *> Color codes for display - ANSI escape sequences
        01 RED-COLOR          PIC X(8) VALUE X"1B5B33316D".
        01 GREEN-COLOR        PIC X(8) VALUE X"1B5B33326D".
        01 RESET-COLOR        PIC X(4) VALUE X"1B5B306D".
+       01 BLUE-COLOR         PIC X(8) VALUE X"1B5B33346D".
+       01 YELLOW-COLOR       PIC X(8) VALUE X"1B5B33336D".
+       01 CYAN-COLOR         PIC X(8) VALUE X"1B5B33366D".
+
+       *> Screen formatting
+       01 CLEAR-SCREEN       PIC X(4) VALUE X"1B5B324A".
+       01 WS-DUMMY-INPUT     PIC X.
 
        01  WS-HEADER-1.
            05 FILLER               PIC X(11) VALUE 'CUSTOMER ID'.
@@ -48,11 +55,11 @@
            05 FILLER               PIC X(19) VALUE SPACES.
            05 FILLER               PIC X(5) VALUE 'PHONE'.
            05 FILLER               PIC X(14) VALUE SPACES.
-           05 FILLER               PIC X(5) VALUE 'EMAIL'.
-           05 FILLER               PIC X(29) VALUE SPACES.
+           05 FILLER               PIC X(3) VALUE 'AGE'.
+           05 FILLER               PIC X(5) VALUE SPACES.
+           05 FILLER               PIC X(6) VALUE 'GENDER'.
+           05 FILLER               PIC X(5) VALUE SPACES.
            05 FILLER               PIC X(10) VALUE 'NRC NUMBER'.
-           05 FILLER               PIC X(18) VALUE SPACES.
-           05 FILLER               PIC X(8) VALUE 'BOOKINGS'.
 
        01  WS-HEADER-2.
            05 FILLER               PIC X(11) VALUE '-----------'.
@@ -62,13 +69,12 @@
            05 FILLER               PIC X(3) VALUE SPACES.
            05 FILLER               PIC X(15) VALUE '---------------'.
            05 FILLER               PIC X(4) VALUE SPACES.
-           05 FILLER               PIC X(30)
-           VALUE '------------------------------'.
-           05 FILLER               PIC X(4) VALUE SPACES.
+           05 FILLER               PIC X(3) VALUE '---'.
+           05 FILLER               PIC X(5) VALUE SPACES.
+           05 FILLER               PIC X(6) VALUE '------'.
+           05 FILLER               PIC X(5) VALUE SPACES.
            05 FILLER               PIC X(25)
            VALUE '-------------------------'.
-           05 FILLER               PIC X(3) VALUE SPACES.
-           05 FILLER               PIC X(8) VALUE '--------'.
 
        01  WS-DETAIL-LINE.
            05 WS-DL-CUSTOMER-ID    PIC Z(5)9.
@@ -77,11 +83,11 @@
            05 FILLER               PIC X(3) VALUE SPACES.
            05 WS-DL-PHONE          PIC X(15).
            05 FILLER               PIC X(4) VALUE SPACES.
-           05 WS-DL-EMAIL          PIC X(30).
-           05 FILLER               PIC X(4) VALUE SPACES.
-           05 WS-NRC-NUMBER        PIC X(25).
-           05 FILLER               PIC X(1) VALUE SPACES.
-           05 WS-DL-BOOKING-COUNT  PIC ZZ9.
+           05 WS-DL-AGE            PIC ZZ9.
+           05 FILLER               PIC X(8) VALUE SPACES.
+           05 WS-DL-GENDER         PIC X(1).
+           05 FILLER               PIC X(7) VALUE SPACES.
+           05 WS-DL-NRC-NUMBER     PIC X(25).
 
        LINKAGE SECTION.
        01 LINK PIC 9.
@@ -90,15 +96,27 @@
 
        MAIN-LOOP.
            PERFORM UNTIL MENU-CHOICE = 9
-           DISPLAY
-           "**************************************************"
-           DISPLAY "View Hotel Customers"
-           DISPLAY "1. View All Customers"
-           DISPLAY "2. Search Customer By ID"
-           DISPLAY "3. Search Customer By Name"
-           DISPLAY "9. Go Back"
-           DISPLAY
-           "**************************************************"
+           DISPLAY CLEAR-SCREEN
+           DISPLAY BLUE-COLOR
+           DISPLAY "==============================================="
+           "================================"
+           DISPLAY "                         VIEW HOTEL CUSTOMERS "
+           "                               "
+           DISPLAY "==============================================="
+           "================================"
+           RESET-COLOR
+           DISPLAY "                                               "
+           DISPLAY "                        1. View All Customers "
+           "                               "
+           DISPLAY "                        2. Search Customer By "
+           "ID                             "
+           DISPLAY "                        3. Search Customer By "
+           "Name                           "
+           DISPLAY "                        9. Return to Main Menu"
+           "                               "
+           DISPLAY "                                               "
+           DISPLAY "==============================================="
+           "================================"
            ACCEPT MENU-CHOICE
            EVALUATE MENU-CHOICE
                WHEN 1 PERFORM ALL-CUSTOMERS-DSP
@@ -106,7 +124,12 @@
                WHEN 3 PERFORM SEARCH-BY-NAME
                WHEN 9 GOBACK
                WHEN OTHER
-                   DISPLAY RED-COLOR "Invalid selection." RESET-COLOR
+                   DISPLAY " "
+                   DISPLAY RED-COLOR "*** ERROR: Invalid selection. P"
+                   "lease choose 1-3 or 9. ***" RESET-COLOR
+                   DISPLAY " "
+                   DISPLAY "Press ENTER to continue..."
+                   ACCEPT WS-DUMMY-INPUT
            END-EVALUATE
            END-PERFORM.
            GOBACK.
@@ -114,6 +137,17 @@
        ALL-CUSTOMERS-DSP.
            MOVE 0 TO WS-CUSTOMER-COUNTER
            MOVE 'N' TO WS-EOF
+           DISPLAY CLEAR-SCREEN
+           DISPLAY CYAN-COLOR
+           DISPLAY "==============================================="
+           "================================"
+           DISPLAY "                         ALL CUSTOMERS REPORT "
+           "                               "
+           DISPLAY "==============================================="
+           "================================"
+           RESET-COLOR
+           DISPLAY " "
+
            PERFORM OPEN-FILES
            IF WS-EOF = 'N'
                PERFORM DISPLAY-HEADERS
@@ -123,15 +157,29 @@
            PERFORM CLOSE-FILES.
 
        SEARCH-BY-ID.
+           DISPLAY CLEAR-SCREEN
+           DISPLAY YELLOW-COLOR
+           DISPLAY "==============================================="
+           "================================"
+           DISPLAY "                       SEARCH CUSTOMER BY ID  "
+           "                               "
+           DISPLAY "==============================================="
+           "================================"
+           RESET-COLOR
+           DISPLAY " "
            DISPLAY "Enter Customer ID to search: "
            ACCEPT CUSTOMER-ID
            MOVE 'N' TO WS-EOF
+           DISPLAY " "
            PERFORM OPEN-FILES
            IF WS-EOF = 'N'
                PERFORM DISPLAY-HEADERS
                READ CUSTOMER-FILE KEY IS CUSTOMER-ID
                    INVALID KEY
-                       DISPLAY "Customer ID " CUSTOMER-ID " not found."
+                       DISPLAY " "
+                       DISPLAY RED-COLOR "Customer ID " CUSTOMER-ID
+                       " not found." RESET-COLOR
+                       DISPLAY " "
                    NOT INVALID KEY
                        PERFORM DISPLAY-CUSTOMER-RECORD
                        ADD 1 TO WS-CUSTOMER-COUNTER
@@ -141,12 +189,23 @@
            PERFORM CLOSE-FILES.
 
        SEARCH-BY-NAME.
+           DISPLAY CLEAR-SCREEN
+           DISPLAY YELLOW-COLOR
+           DISPLAY "==============================================="
+           "================================"
+           DISPLAY "                     SEARCH CUSTOMER BY NAME  "
+           "                               "
+           DISPLAY "==============================================="
+           "================================"
+           RESET-COLOR
+           DISPLAY " "
            DISPLAY "Enter Customer Name to search: "
            ACCEPT WS-SEARCH-NAME
            MOVE FUNCTION UPPER-CASE(WS-SEARCH-NAME)
            TO WS-SEARCH-NAME-UPPER
            MOVE 'N' TO WS-EOF
            MOVE 0 TO WS-CUSTOMER-COUNTER
+           DISPLAY " "
            PERFORM OPEN-FILES
            IF WS-EOF = 'N'
                PERFORM DISPLAY-HEADERS
@@ -169,8 +228,10 @@
            PERFORM CLOSE-FILES.
 
        DISPLAY-HEADERS.
+           DISPLAY YELLOW-COLOR
            DISPLAY WS-HEADER-1
-           DISPLAY WS-HEADER-2.
+           DISPLAY WS-HEADER-2
+           RESET-COLOR.
 
        READ-AND-DISPLAY-ALL.
            READ CUSTOMER-FILE NEXT RECORD
@@ -182,51 +243,50 @@
            END-READ.
 
        DISPLAY-CUSTOMER-RECORD.
-           *> Count bookings for this customer
-           PERFORM COUNT-CUSTOMER-BOOKINGS
-
            MOVE CUSTOMER-ID TO WS-DL-CUSTOMER-ID
            MOVE CUSTOMER-NAME TO WS-DL-NAME
            MOVE CUSTOMER-PHONE TO WS-DL-PHONE
-           MOVE WS-BOOKING-COUNT TO WS-DL-BOOKING-COUNT
+           MOVE CUSTOMER-AGE TO WS-DL-AGE
+           MOVE CUSTOMER-GENDER TO WS-DL-GENDER
+           MOVE NRC-NUMBER TO WS-DL-NRC-NUMBER
            DISPLAY WS-DETAIL-LINE.
 
        DISPLAY-SUMMARY.
-           DISPLAY SPACES
+           DISPLAY " "
+           DISPLAY "==============================================="
+           "================================"
            IF WS-CUSTOMER-COUNTER = 0
-               DISPLAY "No customers found."
+               DISPLAY RED-COLOR "No customers found." RESET-COLOR
            ELSE
-               DISPLAY "Total Customers: " WS-CUSTOMER-COUNTER
-           END-IF.
-
-       COUNT-CUSTOMER-BOOKINGS.
-           MOVE 0 TO WS-BOOKING-COUNT
-           MOVE 'N' TO WS-BOOKING-EOF
-           *> Read through all booking records to count matches
-           PERFORM UNTIL WS-BOOKING-EOF = 'Y'
-               READ BOOKING-FILE NEXT RECORD
-                   AT END
-                       MOVE 'Y' TO WS-BOOKING-EOF
-                   NOT AT END
-                       IF CUSTOMER-ID-BK = CUSTOMER-ID
-                           ADD 1 TO WS-BOOKING-COUNT
-                       END-IF
-               END-READ
-           END-PERFORM.
+               DISPLAY GREEN-COLOR "Total Customers Found: "
+               WS-CUSTOMER-COUNTER RESET-COLOR
+           END-IF
+           DISPLAY "==============================================="
+           "================================"
+           DISPLAY " "
+           DISPLAY "Press ENTER to continue..."
+           ACCEPT WS-DUMMY-INPUT.
 
        OPEN-FILES.
            OPEN INPUT CUSTOMER-FILE BOOKING-FILE
            IF WS-FILE-STATUS NOT = '00' AND WS-FILE-STATUS NOT = '97'
-               DISPLAY "Error opening CUSTOMER file: " WS-FILE-STATUS
+               DISPLAY " "
+               DISPLAY RED-COLOR "Error opening CUSTOMER file: "
+               WS-FILE-STATUS RESET-COLOR
                IF WS-FILE-STATUS = '35'
-                   DISPLAY
+                   DISPLAY RED-COLOR
                    "Customer file doesn't exist or no records found."
+                   RESET-COLOR
                END-IF
+               DISPLAY " "
+               DISPLAY "Press ENTER to continue..."
+               ACCEPT WS-DUMMY-INPUT
                MOVE 'Y' TO WS-EOF
            ELSE
                IF WS-BOOKING-FILE-STATUS NOT = '00' AND
                   WS-BOOKING-FILE-STATUS NOT = '97'
-                   DISPLAY "Warning: Cannot access booking data"
+                   DISPLAY YELLOW-COLOR
+                   "Warning: Cannot access booking data" RESET-COLOR
                END-IF
            END-IF.
 

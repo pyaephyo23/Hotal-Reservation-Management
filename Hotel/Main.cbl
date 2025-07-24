@@ -1,39 +1,57 @@
-
+      ******************************************************************
+      * Author: Kaung Myat Htun
+      * Date:
+      * Purpose: The Main program of Hotel Reservation Management System
+      * Tectonics: cobc
+      ******************************************************************
        IDENTIFICATION DIVISION.
        PROGRAM-ID. Main.
        DATA DIVISION.
        FILE SECTION.
        WORKING-STORAGE SECTION.
        01 MENU-CHOICE PIC 99.
-       01 RED-COLOR PIC X(10) VALUE X"1B5B33316D".
-       01 BLUE-COLOR PIC X(10) VALUE X"1B5B33346D".
-       01 GREEN-COLOR PIC X(10) VALUE X"1B5B33326D".
-       01 RESET-COLOR PIC X(4) VALUE X"1B5B306D".
+
+       *> Color codes for display - ANSI escape sequences
+       01 RED-COLOR          PIC X(8) VALUE X"1B5B33316D".
+       01 GREEN-COLOR        PIC X(8) VALUE X"1B5B33326D".
+       01 RESET-COLOR        PIC X(4) VALUE X"1B5B306D".
+       01 BLUE-COLOR         PIC X(8) VALUE X"1B5B33346D".
+       01 YELLOW-COLOR       PIC X(8) VALUE X"1B5B33336D".
+       01 CYAN-COLOR         PIC X(8) VALUE X"1B5B33366D".
+
+       *> Screen formatting
+       01 CLEAR-SCREEN       PIC X(4) VALUE X"1B5B324A".
+       01 WS-DUMMY-INPUT     PIC X.
+
        PROCEDURE DIVISION.
        MAIN-PROCEDURE.
            PERFORM UNTIL MENU-CHOICE = 99
-           DISPLAY
-           "**************************************************"
-           DISPLAY BLUE-COLOR WITH NO ADVANCING
-           DISPLAY "Hotel Reservation Management System"
-           WITH NO ADVANCING
-           DISPLAY RESET-COLOR
-
-           DISPLAY
-           "**************************************************"
-           DISPLAY "1. Book a Room"
-           DISPLAY "2. Cancel Booking"
-           DISPLAY "3. Check-In"
-           DISPLAY "4. Check-Out"
-           DISPLAY "5. View Rooms"
-           DISPLAY "6. View Bookings"
-           DISPLAY "7. View Customers"
-           DISPLAY "8. View Invoices"
-           DISPLAY "9. Generate Daily Summary Report"
-           DISPLAY "10. Generate Monthly Summary Report"
-           DISPLAY "99. Exit" 
-           DISPLAY
-           "**************************************************"
+           DISPLAY CLEAR-SCREEN
+           DISPLAY BLUE-COLOR
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                    HOTEL RESERVATION MANAGEMENT S"
+           "YSTEM                     "
+           DISPLAY "==================================================="
+           "============================"
+           RESET-COLOR
+           DISPLAY "                                                   "
+           DISPLAY "                              1. Book a Room       "
+           DISPLAY "                              2. Cancel Booking    "
+           DISPLAY "                              3. Check-In          "
+           DISPLAY "                              4. Check-Out         "
+           DISPLAY "                              5. View Bookings     "
+           DISPLAY "                              6. View Hotel Rooms  "
+           DISPLAY "                              7. View Customers    "
+           DISPLAY "                              8. View Check-In/Out "
+           DISPLAY "                              9. Generate Daily Rep"
+           "ort                          "
+           DISPLAY "                              10. Generate Monthly "
+           "Report                        "
+           DISPLAY "                              99. Exit             "
+           DISPLAY "                                                   "
+           DISPLAY "==================================================="
+           "============================"
            ACCEPT MENU-CHOICE
 
            EVALUATE MENU-CHOICE
@@ -41,56 +59,68 @@
                WHEN 2 PERFORM CANCEL-BOOKING
                WHEN 3 PERFORM CHECK-IN
                WHEN 4 PERFORM CHECK-OUT
-               WHEN 5 PERFORM VIEW-ROOMS
-               WHEN 6 PERFORM VIEW-BOOKINGS
+               WHEN 5 PERFORM VIEW-BOOKINGS
+               WHEN 6 PERFORM VIEW-ROOMS
                WHEN 7 PERFORM VIEW-CUSTOMERS
-               WHEN 8 PERFORM VIEW-INVOICES
-               WHEN 9 PERFORM GENERATE-DAILY-REPORT
-               WHEN 10 PERFORM GENERATE-MONTHLY-REPORT
+               WHEN 8 PERFORM VIEW-CHECKINOUT
+               WHEN 9 PERFORM DAILY-REPORT
+               WHEN 10 PERFORM MONTHLY-REPORT
                WHEN 99
-                   DISPLAY GREEN-COLOR WITH NO ADVANCING
-                   DISPLAY "Thank you for using Our System!"
-                           WITH NO ADVANCING
-                   DISPLAY RESET-COLOR
-                   DISPLAY GREEN-COLOR WITH NO ADVANCING
-                   DISPLAY "Goodbye!" WITH NO ADVANCING
-                   DISPLAY RESET-COLOR
+                   DISPLAY CLEAR-SCREEN
+                   DISPLAY GREEN-COLOR
+                   DISPLAY "==========================================="
+                   "========"
+                   "============================"
+                   DISPLAY "                      THANK YOU FOR USING O"
+                   "UR SYST"
+                   "EM                        "
+                   DISPLAY "==========================================="
+                   "========"
+                   "============================"
+                   RESET-COLOR
+
+                   STOP RUN
                WHEN OTHER
-                   DISPLAY RED-COLOR WITH NO ADVANCING
-                   DISPLAY "Invalid selection." WITH NO ADVANCING
-                   DISPLAY RESET-COLOR
+                   DISPLAY " "
+                   DISPLAY RED-COLOR "*** ERROR: Invalid selection. Ple"
+                   "ase choose a valid option (1-10, 99). ***"
+                   RESET-COLOR
+                   DISPLAY " "
+                   DISPLAY "Press ENTER to continue..."
+                   ACCEPT WS-DUMMY-INPUT
            END-EVALUATE
            END-PERFORM.
            STOP RUN.
 
        BOOK-ROOM.
-           CALL 'bookRoom'
-           CANCEL 'bookRoom'.
+           CALL 'bookRoom'.
+           cancel 'bookRoom'.
+
        CANCEL-BOOKING.
-           CALL 'cancelBooking'
-           CANCEL 'cancelBooking'.
-       CHECK-IN.
-           CALL 'checkIn'
-           CANCEL 'checkIn'.
-       CHECK-OUT.
-           CALL 'checkOut'
-           CANCEL 'checkOut'.
-       VIEW-ROOMS.
-           CALL 'viewRooms'
-           CANCEL 'viewRooms'.
+           CALL 'cancelBooking'.
+              cancel 'cancelBooking'.
        VIEW-BOOKINGS.
-           CALL 'viewBookings'
-           CANCEL 'viewBookings'.
+           CALL 'viewBookings'.
+              cancel 'viewBookings'.
+       CHECK-IN.
+           CALL 'checkIn'.
+                cancel 'checkIn'.
+       CHECK-OUT.
+           CALL 'checkOut'.
+                cancel 'checkOut'.
+       VIEW-ROOMS.
+           CALL 'viewRooms'.
+              cancel 'viewRooms'.
        VIEW-CUSTOMERS.
-           CALL 'viewGuests'
-           CANCEL 'viewGuests'.
-       VIEW-INVOICES.
-           CALL 'viewInvoices'
-           CANCEL 'viewInvoices'.
-       GENERATE-DAILY-REPORT.
-           CALL 'dailySummaryReport'
-           CANCEL 'dailySummaryReport'.
-       GENERATE-MONTHLY-REPORT.
-           CALL 'monthlySummaryReport'
-           CANCEL 'monthlySummaryReport'.
+           CALL 'viewCustomers'.
+                cancel 'viewCustomers'.
+       VIEW-CHECKINOUT.
+           CALL 'viewCheckInOut'.
+                cancel 'viewCheckInOut'.
+       DAILY-REPORT.
+           CALL 'dailySummaryReport.'
+                cancel 'dailySummaryReport'.
+       MONTHLY-REPORT.
+           CALL 'monthlySummaryReport'.
+                cancel 'monthlySummaryReport'.
        END PROGRAM Main.
