@@ -72,8 +72,11 @@
            "ber                    "
            DISPLAY "                    2. Cancel All Expired Bookings"
            " (Past Check-in Date)      "
-           DISPLAY "                    9. Go Back                     "
            DISPLAY "                                                   "
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                    9. Go Back to Main Menu        "
+
            DISPLAY "==================================================="
            "============================"
            ACCEPT WS-CHOICE

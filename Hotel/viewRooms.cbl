@@ -17,6 +17,7 @@
        WORKING-STORAGE SECTION.
        01  WS-EOF                  PIC X VALUE 'N'.
        01  WS-ROOM-COUNTER         PIC 999 VALUE 0.
+       01  WS-ROOM-COUNT-DISPLAY   PIC ZZZ.
        01  MENU-CHOICE             PIC 9.
 
        *> Color codes for display - ANSI escape sequences
@@ -67,27 +68,29 @@
            PERFORM UNTIL MENU-CHOICE = 9
            DISPLAY CLEAR-SCREEN
            DISPLAY BLUE-COLOR
-           DISPLAY "==============================================="
-           "================================"
-           DISPLAY "                         VIEW HOTEL ROOMS     "
-           "                               "
-           DISPLAY "==============================================="
-           "================================"
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                         VIEW HOTEL ROOMS SYSTEM  "
+           "                           "
+           DISPLAY "==================================================="
+           "============================"
            RESET-COLOR
-           DISPLAY "                                               "
-           DISPLAY "                        1. View All Rooms     "
-           "                               "
-           DISPLAY "                        2. View Single Rooms  "
-           "                               "
-           DISPLAY "                        3. View Double Rooms  "
-           "                               "
-           DISPLAY "                        4. View Delux Rooms   "
-           "                               "
-           DISPLAY "                        9. Return to Main Menu"
-           "                               "
-           DISPLAY "                                               "
-           DISPLAY "==============================================="
-           "================================"
+           DISPLAY "                                                   "
+           DISPLAY "                        1. View All Rooms         "
+           "                        "
+           DISPLAY "                        2. View Single Rooms      "
+           "                        "
+           DISPLAY "                        3. View Double Rooms      "
+           "                        "
+           DISPLAY "                        4. View Delux Rooms       "
+           "                        "
+           DISPLAY "                                                   "
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                        9. Go Back to Main Menu   "
+           "                     "
+           DISPLAY "==================================================="
+           "============================"
            ACCEPT MENU-CHOICE
            EVALUATE MENU-CHOICE
                WHEN 1 PERFORM All-ROOMS-DSP
@@ -242,11 +245,12 @@
            DISPLAY WS-DETAIL-LINE.
 
        DISPLAY-SUMMARY.
+           MOVE WS-ROOM-COUNTER TO WS-ROOM-COUNT-DISPLAY
            DISPLAY " "
            DISPLAY "==============================================="
            "================================"
-           DISPLAY GREEN-COLOR "Total Rooms Found: " WS-ROOM-COUNTER
-           RESET-COLOR
+           DISPLAY GREEN-COLOR "Total Rooms Found: " 
+           WS-ROOM-COUNT-DISPLAY RESET-COLOR
            DISPLAY "==============================================="
            "================================"
            DISPLAY " "

@@ -103,9 +103,11 @@
            RESET-COLOR
            DISPLAY "                                                   "
            DISPLAY "                              1. Book a Room       "
+           DISPLAY "                                                   "
+           DISPLAY "==================================================="
+           "============================"
            DISPLAY "                              9. Go Back to Main Me"
            "nu                          "
-           DISPLAY "                                                   "
            DISPLAY "==================================================="
            "============================"
            ACCEPT WS-CHOICE
@@ -201,7 +203,7 @@
            "================================"
            DISPLAY "  Booking ID:       " WS-BOOKING-ID
            DISPLAY "  Room:             " WS-SELECTED-ROOM
-           DISPLAY "  Booker:           " WS-BOOKER-NAME
+           DISPLAY "  Customer:         " WS-BOOKER-NAME
            DISPLAY "  Phone:            " WS-BOOKER-PHONE
            DISPLAY "  Check-in:         " WS-CHECKIN-DATE(1:4) "/"
                    WS-CHECKIN-DATE(5:2) "/" WS-CHECKIN-DATE(7:2)
@@ -304,7 +306,6 @@
            DISPLAY "                            0. Cancel reservation  "
            DISPLAY "==================================================="
            "============================"
-           DISPLAY "Enter your choice (1-3) or 0 to cancel: "
 
            ACCEPT WS-TEMP-CHAR
 
@@ -528,9 +529,7 @@
            "===========================".
 
        SELECT-ROOM.
-           DISPLAY "Please select a room (1-" WS-ROOM-COUNT
-           ") or 0 to cancel: "
-           ACCEPT WS-ROOM-CHOICE
+            ACCEPT WS-ROOM-CHOICE
 
            IF WS-ROOM-CHOICE = 0
                DISPLAY " "
@@ -575,7 +574,7 @@
            DISPLAY "                        Type 'CANCEL' to cancel    "
            DISPLAY "==================================================="
            "==========================="
-           DISPLAY "Booker Name: "
+           DISPLAY "Customer Name: "
            ACCEPT WS-BOOKER-NAME
 
            *> Check for cancellation (empty input)
@@ -589,6 +588,7 @@
                EXIT PARAGRAPH
            END-IF
 
+           DISPLAY " "
            DISPLAY "Phone Number: "
            ACCEPT WS-BOOKER-PHONE
 
@@ -665,7 +665,7 @@
            RESET-COLOR
            DISPLAY "                                                   "
            DISPLAY "  Room:             " WS-SELECTED-ROOM
-           DISPLAY "  Booker:           " WS-BOOKER-NAME
+           DISPLAY "  Customer:           " WS-BOOKER-NAME
            DISPLAY "  Phone:            " WS-BOOKER-PHONE
            DISPLAY "  Check-in:         " WS-CHECKIN-DATE(1:4) "/"
                    WS-CHECKIN-DATE(5:2) "/" WS-CHECKIN-DATE(7:2)

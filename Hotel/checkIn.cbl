@@ -154,8 +154,11 @@
            DISPLAY "                                                   "
            DISPLAY "                              1. Check In          "
            DISPLAY "                              2. Walk-in Check In  "
-           DISPLAY "                              9. Go Back           "
            DISPLAY "                                                   "
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                              9. Go Back to Main Me"
+           "nu            "
            DISPLAY "==================================================="
            "============================"
            ACCEPT WS-CHOICE
@@ -208,7 +211,7 @@
            DISPLAY "                                                   "
 
            *> Accept booker phone number
-           DISPLAY "Enter Booker Phone Number: "
+           DISPLAY "Enter Customer Phone Number: "
            ACCEPT WS-CUSTOMER-PHONE
 
            *> Accept room number
@@ -530,9 +533,9 @@
        GET-VALID-AGE.
            MOVE 'N' TO WS-VALIDATION-PASSED
            PERFORM UNTIL WS-VALIDATION-PASSED = 'Y'
-               DISPLAY "Guest Age (1-120): "
+               DISPLAY "Guest Age (1-***): "
                ACCEPT WS-GUEST-AGE
-
+               DISPLAY " "
                IF WS-GUEST-AGE IS NUMERIC
                    IF WS-GUEST-AGE >= 1 AND WS-GUEST-AGE <= 120
                        MOVE WS-GUEST-AGE TO WS-GUEST-AGE-T(WS-GUEST-IDX)
@@ -562,7 +565,7 @@
            DISPLAY "Gender: " WS-GUEST-GENDER-T(WS-GUEST-IDX)
            DISPLAY "NRC: " WS-GUEST-NRC-T(WS-GUEST-IDX)
            DISPLAY "Is this information correct? (Y/N): "
-
+           DISPLAY " "
            ACCEPT WS-CONFIRM-INFO
 
            IF WS-CONFIRM-INFO = 'Y' OR WS-CONFIRM-INFO = 'y'
@@ -1000,6 +1003,7 @@
                    IF WS-FOUND = 'Y'
                        PERFORM WALKIN-COLLECT-GUEST-INFO
                        IF WS-FOUND = 'Y'
+
                            PERFORM EXECUTE-WALKIN-CHECK-IN
                        END-IF
                    END-IF
@@ -1011,20 +1015,35 @@
            DISPLAY CYAN-COLOR
            DISPLAY "==================================================="
            "============================"
-           DISPLAY "                        WALK-IN CHECK-IN           "
+           DISPLAY "                             WALK-IN CHECK-IN      "
+
            DISPLAY "==================================================="
            "============================"
            RESET-COLOR
+
            DISPLAY "                                                   "
-           DISPLAY "           Please select room type:                "
+
+           DISPLAY "                      Please select your preferred "
+           "room type:                 "
            DISPLAY "                                                   "
-           DISPLAY "                1. Single                          "
-           DISPLAY "                2. Double                          "
-           DISPLAY "                3. Delux                           "
-           DISPLAY "                9. Go Back                         "
-           DISPLAY "                                                   "
-           DISPLAY "Enter your choice: "
+
+           DISPLAY "                              1. Single Room       "
+
+           DISPLAY "                              2. Double Room       "
+
+           DISPLAY "                              3. Deluxe Room       "
+
+           DISPLAY "  "
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                            0. Cancel reservation  "
+           DISPLAY "==================================================="
+           "============================"
+
+           DISPLAY "Enter your choice (1-3) or 0 to cancel: "
+           WITH NO ADVANCING
            ACCEPT WS-CHOICE
+           DISPLAY " "
 
            EVALUATE WS-CHOICE
                WHEN 1
@@ -1036,17 +1055,29 @@
                WHEN 3
                    MOVE 'Delux' TO WS-SELECTED-ROOM-TYPE
                    MOVE 'Y' TO WS-FOUND
-               WHEN 9
+               WHEN 0
                    MOVE 'N' TO WS-FOUND
+                   DISPLAY " "
+                   DISPLAY RED-COLOR "*** Walk-in check-in cancelled by"
+                   "user. ***"
+                   RESET-COLOR
+                   DISPLAY " "
                WHEN OTHER
                    DISPLAY " "
-                   DISPLAY RED-COLOR
-                   "Invalid selection. Please choose 1, 2, 3, or 9."
-                   RESET-COLOR
-                   DISPLAY "Press ENTER to continue..."
+                   DISPLAY RED-COLOR "*** ERROR: Invalid selection. Ple"
+                   "ase choose 1, 2, 3, or 0. ***" RESET-COLOR
+                   DISPLAY " "
+                   DISPLAY "Press ENTER to try again..."
                    ACCEPT WS-DUMMY-INPUT
                    MOVE 'N' TO WS-FOUND
-           END-EVALUATE.
+           END-EVALUATE
+
+           IF WS-FOUND = 'Y'
+               DISPLAY " "
+               DISPLAY GREEN-COLOR "Room type selected: "
+               WS-SELECTED-ROOM-TYPE RESET-COLOR
+               DISPLAY " "
+           END-IF.
 
        LIST-AVAILABLE-ROOMS.
            DISPLAY CLEAR-SCREEN
@@ -1054,7 +1085,8 @@
            DISPLAY "==================================================="
            "============================"
            DISPLAY
-           "          AVAILABLE " WS-SELECTED-ROOM-TYPE " ROOMS"
+           "                      AVAILABLE " WS-SELECTED-ROOM-TYPE
+           " ROOMS                            "
            DISPLAY "==================================================="
            "============================"
            RESET-COLOR
@@ -1095,12 +1127,11 @@
                            TO WS-ROOM-PRICE-ARRAY(WS-ROOM-COUNTER)
 
                            *> Display room
-
-                           DISPLAY "  " WS-ROOM-COUNTER ". Room "
-                           ROOM-ID " - " ROOM-TYPE
+                           DISPLAY "                " WS-ROOM-COUNTER
+                           ". Room " ROOM-ID " - " ROOM-TYPE
                            " ("
                   FUNCTION TRIM(WS-ROOM-PRICE-ARRAY(WS-ROOM-COUNTER))
-                           "/night)"
+                           "/night)                       "
                        END-IF
                END-READ
            END-PERFORM
@@ -1108,7 +1139,7 @@
 
            IF WS-AVAILABLE-ROOMS = 0
                DISPLAY " "
-               DISPLAY RED-COLOR "No available "
+               DISPLAY RED-COLOR "Sorry, no available "
                FUNCTION TRIM(WS-SELECTED-ROOM-TYPE)
                " rooms found." RESET-COLOR
                DISPLAY " "
@@ -1121,7 +1152,11 @@
                DISPLAY GREEN-COLOR "Found " WS-ROOM-COUNT-DSP
                " available room(s)." RESET-COLOR
                DISPLAY " "
-               DISPLAY "Enter 0 to go back to room type selection."
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                            0. Cancel reservation  "
+           DISPLAY "==================================================="
+           "============================"
                MOVE 'Y' TO WS-FOUND
            END-IF.
 
@@ -1130,6 +1165,7 @@
            DISPLAY "Enter your choice (1-" WS-ROOM-COUNT-DSP
            " or 0 to go back): "
            ACCEPT WS-ROOM-SELECTION
+           DISPLAY " "
 
            *> Validate selection
            IF WS-ROOM-SELECTION = 0
@@ -1166,6 +1202,7 @@
                    DISPLAY RED-COLOR "Invalid selection. Please choose "
                            "a number between 1 and " WS-ROOM-COUNT-DSP
                            " or 0 to go back." RESET-COLOR
+                   DISPLAY " "
                    DISPLAY "Press ENTER to continue..."
                    ACCEPT WS-DUMMY-INPUT
                    MOVE 'N' TO WS-FOUND
@@ -1181,6 +1218,7 @@
                    DISPLAY " "
                    DISPLAY RED-COLOR "Error: Room " WS-ROOM-NUMBER
                            " not found." RESET-COLOR
+                   DISPLAY " "
                    DISPLAY "Press ENTER to continue..."
                    ACCEPT WS-DUMMY-INPUT
                    MOVE 'N' TO WS-FOUND
@@ -1191,6 +1229,7 @@
                        DISPLAY " "
                        DISPLAY RED-COLOR "Sorry, room " WS-ROOM-NUMBER
                                " is no longer available." RESET-COLOR
+                       DISPLAY " "
                        DISPLAY "Press ENTER to continue..."
                        ACCEPT WS-DUMMY-INPUT
                        MOVE 'N' TO WS-FOUND
@@ -1201,7 +1240,9 @@
        WALKIN-COLLECT-GUEST-INFO.
            DISPLAY " "
            DISPLAY "Proceed with guest information collection? (Y/N): "
+
            ACCEPT WS-CONFIRMATION
+           DISPLAY " "
 
            IF WS-CONFIRMATION = 'Y' OR WS-CONFIRMATION = 'y'
                MOVE 'Y' TO WS-FOUND
@@ -1224,7 +1265,8 @@
            DISPLAY CYAN-COLOR
            DISPLAY "==================================================="
            "============================"
-           DISPLAY "                         GUEST COUNT SETUP         "
+           DISPLAY "                             GUEST COUNT SETUP     "
+
            DISPLAY "==================================================="
            "============================"
            RESET-COLOR
@@ -1238,21 +1280,20 @@
 
                WHEN WS-ROOM-TYPE = 'Double'
                    DISPLAY "           Double room - How many guests (1"
-                   "or 2)?:                    "
+                   " or 2)?:                    "
                    ACCEPT WS-CUSTOMER-COUNT
                    IF WS-CUSTOMER-COUNT = 1 OR WS-CUSTOMER-COUNT = 2
                        MOVE WS-CUSTOMER-COUNT TO WS-MAX-CUSTOMERS
                    ELSE
                        DISPLAY " "
-                       DISPLAY YELLOW-COLOR
-                       "Invalid input. Defaulting t"
-                       "o 1 guest." RESET-COLOR
+                       DISPLAY YELLOW-COLOR "Invalid input. Defaulting "
+                       "to 1 guest." RESET-COLOR
                        MOVE 1 TO WS-MAX-CUSTOMERS
                    END-IF
 
                WHEN WS-ROOM-TYPE = 'Delux'
-                   DISPLAY "           Delux room - How many guests (1-"
-                   "9)?:"
+                   DISPLAY "              Delux room - How many guests"
+                   " (1-9)?:                           "
                    ACCEPT WS-CUSTOMER-COUNT
                    IF WS-CUSTOMER-COUNT >= 1 AND WS-CUSTOMER-COUNT <= 9
                        MOVE WS-CUSTOMER-COUNT TO WS-MAX-CUSTOMERS
@@ -1265,12 +1306,12 @@
 
                WHEN OTHER
                    DISPLAY " "
-                   DISPLAY YELLOW-COLOR "Unknown room type. Defaultin"
-                   "g to 1 guest." RESET-COLOR
+                   DISPLAY YELLOW-COLOR "Unknown room type. Defaulting"
+                   " to 1 guest." RESET-COLOR
                    MOVE 1 TO WS-MAX-CUSTOMERS
            END-EVALUATE
 
-           DISPLAY "                                                   "
+           DISPLAY " "
            DISPLAY GREEN-COLOR "Collecting information for "
            WS-MAX-CUSTOMERS " guest(s)." RESET-COLOR
            DISPLAY " "
@@ -1305,10 +1346,10 @@
            DISPLAY "==============================================="
            "================================"
            RESET-COLOR
-           DISPLAY "                                                   "
-           DISPLAY
-           "        Walk-in guest has been successfully checked in!"
-           DISPLAY "                                                   "
+           DISPLAY " "
+           DISPLAY "            Walk-in guest has been successfully che"
+           "cked in!"
+           DISPLAY " "
            DISPLAY "==============================================="
            "================================"
            DISPLAY " "
@@ -1412,6 +1453,7 @@
            PERFORM UNTIL WS-VALIDATION-PASSED = 'Y'
                DISPLAY "Guest Name (2-20 characters, letters only): "
                ACCEPT WS-TEMP-INPUT
+               DISPLAY " "
 
                *> Check if input is not empty and within length limits
                IF FUNCTION LENGTH(FUNCTION TRIM(WS-TEMP-INPUT)) >= 2 AND

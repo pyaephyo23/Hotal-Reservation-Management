@@ -1,12 +1,6 @@
-      ******************************************************************
-      * Author: Kaung Myat Htun
-      * Date: 2025-07-18
-      * Purpose: Daily Summary Report - Check-ins, Check-outs,
-      *          Occupancy Rate, and Revenue
-      * Tectonics: cobc
-      ******************************************************************
+******************************************************************
        IDENTIFICATION DIVISION.
-       PROGRAM-ID. dailySummaryReport.
+       PROGRAM-ID. dailyReport.
 
        ENVIRONMENT DIVISION.
        INPUT-OUTPUT SECTION.
@@ -26,6 +20,11 @@
                ACCESS MODE IS DYNAMIC
                RECORD KEY IS INVOICE-ID.
 
+           SELECT CHECKINOUT-FILE ASSIGN TO '../DATA/CHECKINOUT.DAT'
+               ORGANIZATION IS INDEXED
+               ACCESS MODE IS DYNAMIC
+               RECORD KEY IS CHECKIN-ID.
+
        DATA DIVISION.
        FILE SECTION.
        FD  BOOKING-FILE.
@@ -37,10 +36,14 @@
        FD  INVOICES-FILE.
        COPY "./CopyBooks/INVOICES.cpy".
 
+       FD  CHECKINOUT-FILE.
+       COPY "./CopyBooks/CHECKINOUT.cpy".
+
        WORKING-STORAGE SECTION.
        01  WS-BOOKING-FILE-STATUS  PIC 99.
        01  WS-ROOMS-FILE-STATUS    PIC 99.
        01  WS-INVOICE-FILE-STATUS  PIC 99.
+       01  WS-CHECKINOUT-FILE-STATUS PIC 99.
        01  WS-EOF                  PIC X VALUE 'N'.
 
        01  WS-REPORT-DATE.
@@ -69,6 +72,18 @@
        01  WS-DISPLAY-OCCUPANCY    PIC ZZ9.99.
        01  WS-DISPLAY-REVENUE      PIC $(9).
 
+       *> Color codes for display - ANSI escape sequences
+       01 RED-COLOR          PIC X(8) VALUE X"1B5B33316D".
+       01 GREEN-COLOR        PIC X(8) VALUE X"1B5B33326D".
+       01 RESET-COLOR        PIC X(4) VALUE X"1B5B306D".
+       01 BLUE-COLOR         PIC X(8) VALUE X"1B5B33346D".
+       01 YELLOW-COLOR       PIC X(8) VALUE X"1B5B33336D".
+       01 CYAN-COLOR         PIC X(8) VALUE X"1B5B33366D".
+
+       *> Screen formatting
+       01 CLEAR-SCREEN       PIC X(4) VALUE X"1B5B324A".
+       01 WS-DUMMY-INPUT     PIC X.
+
        *> Temporary fields
        01  WS-TOTAL-CHARGE-DEC     PIC 9(9)V99.
        01  WS-TARGET-BOOKING-ID    PIC 9(5).
@@ -78,7 +93,6 @@
        01 LINK PIC 9.
 
        PROCEDURE DIVISION USING LINK.
-       MAIN-PROCEDURE.
            PERFORM GET-REPORT-DATE
            PERFORM COUNT-CHECKINS-CHECKOUTS
            PERFORM CALCULATE-OCCUPANCY
@@ -90,10 +104,10 @@
            ACCEPT WS-REPORT-DATE FROM DATE YYYYMMDD.
 
        COUNT-CHECKINS-CHECKOUTS.
-           OPEN INPUT BOOKING-FILE
-           IF WS-BOOKING-FILE-STATUS NOT = 00
-               DISPLAY "Error opening BOOKING file: "
-                       WS-BOOKING-FILE-STATUS
+           OPEN INPUT CHECKINOUT-FILE
+           IF WS-CHECKINOUT-FILE-STATUS NOT = 00
+               DISPLAY "Error opening CHECKINOUT file: "
+                       WS-CHECKINOUT-FILE-STATUS
                GOBACK
            END-IF
 
@@ -102,24 +116,23 @@
            MOVE 0 TO WS-CHECKOUTS-TODAY
 
            PERFORM UNTIL WS-EOF = 'Y'
-               READ BOOKING-FILE NEXT RECORD
+               READ CHECKINOUT-FILE NEXT RECORD
                AT END
                    MOVE 'Y' TO WS-EOF
                NOT AT END
-                   PERFORM CHECK-BOOKING-DATES
+                   PERFORM CHECK-CHECKINOUT-DATES
                END-READ
            END-PERFORM
 
-           CLOSE BOOKING-FILE.
+           CLOSE CHECKINOUT-FILE.
 
-       CHECK-BOOKING-DATES.
+       CHECK-CHECKINOUT-DATES.
            *> Convert dates to numeric for comparison
-           MOVE CHECKIN-DATE TO WS-CHECKIN-DATE
+           MOVE ACTUAL-CHECKIN-DATE TO WS-CHECKIN-DATE
            MOVE CHECKOUT-DATE TO WS-CHECKOUT-DATE
 
            *> Count check-ins today
-           IF WS-CHECKIN-DATE = WS-REPORT-DATE AND
-              CHEKIN-FLAG = 'Y'
+           IF WS-CHECKIN-DATE = WS-REPORT-DATE
                ADD 1 TO WS-CHECKINS-TODAY
            END-IF
 
@@ -196,10 +209,9 @@
            *> Only process completed bookings
            IF BOOKING-STATUS = "Completed"
                MOVE CHECKIN-DATE TO WS-CHECKIN-DATE
-               MOVE CHECKOUT-DATE TO WS-CHECKOUT-DATE
 
-               *> Include revenue if guest was staying on report date
-               IF WS-CHECKOUT-DATE = WS-REPORT-DATE
+               *> Include revenue for bookings that checked in on or before report date
+               IF WS-CHECKIN-DATE <= WS-REPORT-DATE
                    PERFORM GET-INVOICE-REVENUE
                END-IF
            END-IF.
@@ -241,31 +253,46 @@
            MOVE WS-OCCUPANCY-RATE TO WS-DISPLAY-OCCUPANCY
            MOVE WS-DAILY-REVENUE TO WS-DISPLAY-REVENUE
 
-           DISPLAY " "
-           DISPLAY "=========================================="
-           DISPLAY "         DAILY SUMMARY REPORT"
-           DISPLAY "=========================================="
-           DISPLAY "Report Date: " WS-REPORT-YEAR "/"
+           DISPLAY CLEAR-SCREEN
+           DISPLAY BLUE-COLOR
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                         DAILY SUMMARY REPORT SYST"
+           "EM                         "
+           DISPLAY "==================================================="
+           "============================"
+           RESET-COLOR
+           DISPLAY "                                                   "
+           DISPLAY "                     Report Date: " WS-REPORT-YEAR
+           "/"
                    WS-REPORT-MONTH "/" WS-REPORT-DAY
-           DISPLAY " "
-           DISPLAY "CHECK-IN/CHECK-OUT ACTIVITY:"
-           DISPLAY "  Check-ins Today : "
+           DISPLAY "                                                   "
+           DISPLAY CYAN-COLOR "                     CHECK-IN/CHECK-OUT "
+           "ACTIVITY:" RESET-COLOR
+           DISPLAY "                       Check-ins Today      : "
            FUNCTION TRIM(WS-DISPLAY-CHECKINS)
-           DISPLAY "  Check-outs Today: "
+           DISPLAY "                       Check-outs Today     : "
            FUNCTION TRIM(WS-DISPLAY-CHECKOUTS)
-           DISPLAY " "
-           DISPLAY "ROOM OCCUPANCY:"
-           DISPLAY "  Occupied Rooms  : "
+           DISPLAY "                                                   "
+           DISPLAY CYAN-COLOR "                     ROOM OCCUPANCY:"
+           RESET-COLOR
+           DISPLAY "                       Occupied Rooms       : "
            FUNCTION TRIM(WS-DISPLAY-OCCUPIED)
-           DISPLAY "  Total Rooms     : "
+           DISPLAY "                       Total Rooms          : "
            FUNCTION TRIM(WS-DISPLAY-TOTAL)
-           DISPLAY "  Occupancy Rate  : "
+           DISPLAY "                       Occupancy Rate       : "
            FUNCTION TRIM(WS-DISPLAY-OCCUPANCY) "%"
-           DISPLAY " "
-           DISPLAY "REVENUE:"
-           DISPLAY " Today's Revenue  : "
+           DISPLAY "                                                   "
+           DISPLAY CYAN-COLOR "                     REVENUE:"
+           RESET-COLOR
+           DISPLAY "                       Daily Revenue        : "
            FUNCTION TRIM(WS-DISPLAY-REVENUE)
-           DISPLAY "=========================================="
-           DISPLAY " ".
+           DISPLAY "                                                   "
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                                                   "
+           DISPLAY "Press ENTER to continue...    "
 
-       END PROGRAM dailySummaryReport.
+           ACCEPT WS-DUMMY-INPUT.
+
+       END PROGRAM dailyReport.

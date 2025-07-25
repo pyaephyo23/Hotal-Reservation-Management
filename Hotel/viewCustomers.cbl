@@ -28,6 +28,7 @@
        01  WS-EOF                  PIC X VALUE 'N'.
        01  WS-BOOKING-EOF          PIC X VALUE 'N'.
        01  WS-CUSTOMER-COUNTER     PIC 999 VALUE 0.
+       01  WS-CUSTOMER-COUNT-DISPLAY PIC ZZZ.
        01  MENU-CHOICE             PIC 9.
        01  WS-FILE-STATUS          PIC 99.
        01  WS-BOOKING-FILE-STATUS  PIC 99.
@@ -98,25 +99,27 @@
            PERFORM UNTIL MENU-CHOICE = 9
            DISPLAY CLEAR-SCREEN
            DISPLAY BLUE-COLOR
-           DISPLAY "==============================================="
-           "================================"
-           DISPLAY "                         VIEW HOTEL CUSTOMERS "
-           "                               "
-           DISPLAY "==============================================="
-           "================================"
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                         VIEW HOTEL CUSTOMERS SYST"
+           "EM                           "
+           DISPLAY "==================================================="
+           "============================"
            RESET-COLOR
-           DISPLAY "                                               "
-           DISPLAY "                        1. View All Customers "
-           "                               "
-           DISPLAY "                        2. Search Customer By "
-           "ID                             "
-           DISPLAY "                        3. Search Customer By "
-           "Name                           "
-           DISPLAY "                        9. Return to Main Menu"
-           "                               "
-           DISPLAY "                                               "
-           DISPLAY "==============================================="
-           "================================"
+           DISPLAY "                                                   "
+           DISPLAY "                        1. View All Customers     "
+           "                        "
+           DISPLAY "                        2. Search Customer By ID  "
+           "                        "
+           DISPLAY "                        3. Search Customer By Name"
+           "                        "
+           DISPLAY "                                                   "
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                        9. Go Back to Main Menu    "
+           "                     "
+           DISPLAY "==================================================="
+           "============================"
            ACCEPT MENU-CHOICE
            EVALUATE MENU-CHOICE
                WHEN 1 PERFORM ALL-CUSTOMERS-DSP
@@ -141,10 +144,12 @@
            DISPLAY CYAN-COLOR
            DISPLAY "==============================================="
            "================================"
+           "====================="
            DISPLAY "                         ALL CUSTOMERS REPORT "
            "                               "
            DISPLAY "==============================================="
            "================================"
+           "====================="
            RESET-COLOR
            DISPLAY " "
 
@@ -161,10 +166,12 @@
            DISPLAY YELLOW-COLOR
            DISPLAY "==============================================="
            "================================"
+           "====================="
            DISPLAY "                       SEARCH CUSTOMER BY ID  "
            "                               "
            DISPLAY "==============================================="
            "================================"
+           "====================="
            RESET-COLOR
            DISPLAY " "
            DISPLAY "Enter Customer ID to search: "
@@ -193,10 +200,12 @@
            DISPLAY YELLOW-COLOR
            DISPLAY "==============================================="
            "================================"
+           "====================="
            DISPLAY "                     SEARCH CUSTOMER BY NAME  "
            "                               "
            DISPLAY "==============================================="
            "================================"
+           "====================="
            RESET-COLOR
            DISPLAY " "
            DISPLAY "Enter Customer Name to search: "
@@ -255,14 +264,17 @@
            DISPLAY " "
            DISPLAY "==============================================="
            "================================"
+           "====================="
            IF WS-CUSTOMER-COUNTER = 0
                DISPLAY RED-COLOR "No customers found." RESET-COLOR
            ELSE
+               MOVE WS-CUSTOMER-COUNTER TO WS-CUSTOMER-COUNT-DISPLAY
                DISPLAY GREEN-COLOR "Total Customers Found: "
-               WS-CUSTOMER-COUNTER RESET-COLOR
+               WS-CUSTOMER-COUNT-DISPLAY RESET-COLOR
            END-IF
            DISPLAY "==============================================="
            "================================"
+           "====================="
            DISPLAY " "
            DISPLAY "Press ENTER to continue..."
            ACCEPT WS-DUMMY-INPUT.

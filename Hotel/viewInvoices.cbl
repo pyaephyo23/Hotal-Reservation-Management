@@ -18,6 +18,7 @@
        WORKING-STORAGE SECTION.
        01  WS-EOF                     PIC X VALUE 'N'.
        01  WS-INVOICE-COUNTER         PIC 999 VALUE 0.
+       01  WS-INVOICE-COUNT-DISPLAY   PIC ZZZ.
        01  WS-TOTAL-AMOUNT            PIC 9(9) VALUE 0.
        01  MENU-CHOICE                PIC 9.
        01  WS-INVOICE-FILE-STATUS     PIC 99.
@@ -93,25 +94,27 @@
            PERFORM UNTIL MENU-CHOICE = 9
            DISPLAY CLEAR-SCREEN
            DISPLAY BLUE-COLOR
-           DISPLAY "==============================================="
-           "================================"
-           DISPLAY "                         VIEW HOTEL INVOICES  "
-           "                               "
-           DISPLAY "==============================================="
-           "================================"
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                         VIEW HOTEL INVOICES SYSTE"
+           "M                           "
+           DISPLAY "==================================================="
+           "============================"
            RESET-COLOR
-           DISPLAY "                                               "
-           DISPLAY "                        1. View All Invoices  "
-           "                               "
-           DISPLAY "                        2. Search Invoice by I"
-           "nvoice ID                      "
-           DISPLAY "                        3. Search Invoice by B"
-           "ooking ID                      "
-           DISPLAY "                        9. Return to Main Menu"
-           "                               "
-           DISPLAY "                                               "
-           DISPLAY "==============================================="
-           "================================"
+           DISPLAY "                                                   "
+           DISPLAY "                        1. View All Invoices      "
+           "                        "
+           DISPLAY "                        2. Search Invoice by Invoi"
+           "ce ID                   "
+           DISPLAY "                        3. Search Invoice by Booki"
+           "ng ID                   "
+           DISPLAY "                                                   "
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                        9. Go Back to Main Menu    "
+           "                     "
+           DISPLAY "==================================================="
+           "============================"
            ACCEPT MENU-CHOICE
            EVALUATE MENU-CHOICE
                WHEN 1 PERFORM ALL-INVOICES-DSP
@@ -319,8 +322,9 @@
            IF WS-INVOICE-COUNTER = 0
                DISPLAY RED-COLOR "No invoices found." RESET-COLOR
            ELSE
+               MOVE WS-INVOICE-COUNTER TO WS-INVOICE-COUNT-DISPLAY
                DISPLAY GREEN-COLOR "Total Invoices Found: "
-               WS-INVOICE-COUNTER RESET-COLOR
+               WS-INVOICE-COUNT-DISPLAY RESET-COLOR
                MOVE WS-TOTAL-AMOUNT TO WS-PRICE-DISPLAY
                DISPLAY GREEN-COLOR "Total Amount: " WS-PRICE-DISPLAY
                RESET-COLOR

@@ -18,6 +18,7 @@
        WORKING-STORAGE SECTION.
        01  WS-EOF                  PIC X VALUE 'N'.
        01  WS-BOOKING-COUNTER      PIC 999 VALUE 0.
+       01  WS-BOOKING-COUNT-DISPLAY PIC ZZZ.
        01  MENU-CHOICE             PIC 9.
        01  WS-FILE-STATUS          PIC 99.
 
@@ -38,7 +39,7 @@
            05 FILLER               PIC X(3) VALUE SPACES.
            05 FILLER               PIC X(4) VALUE 'ROOM'.
            05 FILLER               PIC X(3) VALUE SPACES.
-           05 FILLER               PIC X(15) VALUE 'BOOKER NAME'.
+           05 FILLER               PIC X(15) VALUE 'CUSTOMER NAME'.
            05 FILLER               PIC X(3) VALUE SPACES.
            05 FILLER               PIC X(12) VALUE 'PHONE NUMBER'.
            05 FILLER               PIC X(3) VALUE SPACES.
@@ -64,9 +65,9 @@
            05 FILLER               PIC X(4) VALUE SPACES.
            05 WS-DL-ROOM-ID        PIC X(5).
            05 FILLER               PIC X(2) VALUE SPACES.
-           05 WS-DL-BOOKER-NAME    PIC X(15).
+           05 WS-DL-CUSTOMER-NAME  PIC X(15).
            05 FILLER               PIC X(3) VALUE SPACES.
-           05 WS-DL-BOOKER-PHONE   PIC X(12).
+           05 WS-DL-CUSTOMER-PHONE PIC X(12).
            05 FILLER               PIC X(3) VALUE SPACES.
            05 WS-DL-CHECKIN        PIC X(10).
            05 FILLER               PIC X(3) VALUE SPACES.
@@ -81,26 +82,29 @@
            PERFORM UNTIL MENU-CHOICE = 9
            DISPLAY CLEAR-SCREEN
            DISPLAY BLUE-COLOR
-           DISPLAY "==============================================="
-           "================================"
-           DISPLAY "                           VIEW HOTEL BOOKINGS"
-           "                                "
-           DISPLAY "==============================================="
-           "================================"
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                           VIEW HOTEL BOOKINGS SYS"
+           "TEM                           "
+           DISPLAY "==================================================="
+           "============================"
            RESET-COLOR
-           DISPLAY "                                               "
-           DISPLAY "                        1. View All Bookings  "
-           DISPLAY "                        2. View Active Booking"
-           "s                          "
-           DISPLAY "                        3. View Cancelled Book"
-           "ings                       "
-           DISPLAY "                        4. View Completed Book"
-           "ings                       "
-           DISPLAY "                        9. Return to Main Menu"
-           "                           "
-           DISPLAY "                                               "
-           DISPLAY "==============================================="
-           "================================"
+           DISPLAY "                                                   "
+           DISPLAY "                        1. View All Bookings      "
+           "                        "
+           DISPLAY "                        2. View Active Bookings   "
+           "                        "
+           DISPLAY "                        3. View Cancelled Bookings"
+           "                        "
+           DISPLAY "                        4. View Completed Bookings"
+           "                        "
+           DISPLAY "                                                   "
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                        9. Go Back to Main Menu    "
+           "                     "
+           DISPLAY "==================================================="
+           "============================"
            ACCEPT MENU-CHOICE
            EVALUATE MENU-CHOICE
                WHEN 1 PERFORM ALL-BOOKINGS-DSP
@@ -286,8 +290,8 @@
        DISPLAY-BOOKING-RECORD.
            MOVE BOOKING-ID TO WS-DL-BOOKING-ID
            MOVE ROOM-ID-BK TO WS-DL-ROOM-ID
-           MOVE CUSTOMER-NAME-BK TO WS-DL-BOOKER-NAME
-           MOVE CUSTOMER-PH-BK TO WS-DL-BOOKER-PHONE
+           MOVE CUSTOMER-NAME-BK TO WS-DL-CUSTOMER-NAME
+           MOVE CUSTOMER-PH-BK TO WS-DL-CUSTOMER-PHONE
            *> Format check-in date as YYYY/MM/DD
            STRING CHECKIN-DATE(1:4) "/" CHECKIN-DATE(5:2) "/"
                   CHECKIN-DATE(7:2) INTO WS-DL-CHECKIN
@@ -295,11 +299,12 @@
            DISPLAY WS-DETAIL-LINE.
 
        DISPLAY-SUMMARY.
+           MOVE WS-BOOKING-COUNTER TO WS-BOOKING-COUNT-DISPLAY
            DISPLAY " "
            DISPLAY "==============================================="
            "================================"
            DISPLAY GREEN-COLOR "Total Bookings Found: "
-           WS-BOOKING-COUNTER
+           WS-BOOKING-COUNT-DISPLAY
            RESET-COLOR
            DISPLAY "==============================================="
            "================================"
