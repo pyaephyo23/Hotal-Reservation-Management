@@ -88,6 +88,13 @@
        01 WS-ROOM-TYPE                PIC X(10).
        01 WS-ROOM-PRICE               PIC 9(9).
 
+       *> Multiple guests information
+       01 WS-GUEST-COUNT              PIC 9(2) VALUE 0.
+       01 WS-GUEST-COUNTER            PIC 9(2) VALUE 0.
+       01 WS-GUEST-INFO OCCURS 5 TIMES.
+           05 WS-GUEST-NAME           PIC X(20).
+           05 WS-GUEST-PHONE          PIC X(15).
+
        *> Billing calculations
        01 WS-STAY-DAYS                PIC 9(3).
        01 WS-ROOM-CHARGES             PIC 9(9).
@@ -134,16 +141,18 @@
                RESET-COLOR
                DISPLAY "                                               "
 
-               DISPLAY "                              1. Check-out     "
+               DISPLAY "                              1. Check-out Gues"
+               "t (Room ID only)"
 
+               DISPLAY " "
+               DISPLAY "==============================================="
+               "================================"
                DISPLAY "                              9. Return to Main"
                "Me"
                "nu                          "
-               DISPLAY "                                               "
 
                DISPLAY "==============================================="
-               "===="
-               "============================"
+               "================================"
                ACCEPT WS-CHOICE
 
                EVALUATE WS-CHOICE
@@ -164,22 +173,23 @@
 
            GOBACK.
 
-       *> Check-out guest with Room Number verification
+       *> Check-out guest with Room ID only
        CHECKOUT.
            DISPLAY CLEAR-SCREEN
            DISPLAY CYAN-COLOR
            DISPLAY "==================================================="
            "============================"
-           DISPLAY "                        CHECK-OUT VERIFICATION     "
+           DISPLAY "                           GUEST CHECK-OUT         "
            DISPLAY "==================================================="
            "============================"
            RESET-COLOR
            DISPLAY "                                                   "
-           DISPLAY "           Please provide room number for check-out"
-           "                             "
+           DISPLAY "              Enter Room ID to check out guest     "
            DISPLAY "                                                   "
 
-           DISPLAY "Enter Room Number: "
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "Enter Room ID: "
            ACCEPT WS-SEARCH-ROOM-ID
 
            MOVE 'N' TO WS-FOUND
@@ -201,23 +211,15 @@
 
            IF WS-FOUND = 'N'
                DISPLAY " "
-               DISPLAY RED-COLOR "No active check-in found for room "
+               DISPLAY RED-COLOR "No active guest found in room "
                        WS-SEARCH-ROOM-ID RESET-COLOR
+               DISPLAY
+               "Either room is empty or guest already checked out."
                DISPLAY " "
                DISPLAY "Press ENTER to continue..."
                ACCEPT WS-DUMMY-INPUT
            ELSE
-               IF CHECKOUT-FLAG = 'Y'
-                   DISPLAY " "
-                   DISPLAY YELLOW-COLOR "Check-out already compl"
-                   "eted." RESET-COLOR
-                   DISPLAY " "
-                   DISPLAY "Press ENTER to continue..."
-                   ACCEPT WS-DUMMY-INPUT
-                   MOVE 'N' TO WS-FOUND
-               ELSE
-                   PERFORM PROCESS-CHECKOUT
-               END-IF
+               PERFORM PROCESS-CHECKOUT
            END-IF
            CLOSE CHECKINOUT-FILE.
 
@@ -227,24 +229,15 @@
            PERFORM DISPLAY-CHECKIN-DETAILS
 
            *> Get confirmation
-           DISPLAY CLEAR-SCREEN
+           DISPLAY " "
            DISPLAY YELLOW-COLOR
-           DISPLAY "==================================================="
-           "============================"
-           DISPLAY "                         CHECK-OUT CONFIRMATION    "
-           DISPLAY "==================================================="
-           "============================"
+           "Confirm check-out for this guest? (Y/N): "
            RESET-COLOR
-           DISPLAY "                                                   "
-           DISPLAY "Confirm check-out? (Y/N): "
            ACCEPT WS-CONFIRMATION
 
            IF WS-CONFIRMATION = 'Y' OR WS-CONFIRMATION = 'y'
                *> Get current date and time
                PERFORM GET-CURRENT-DATETIME
-
-               *> Get additional information
-               PERFORM GET-GUEST-INFORMATION
 
                *> Calculate billing
                PERFORM CALCULATE-BILLING
@@ -262,8 +255,8 @@
                DISPLAY GREEN-COLOR
                DISPLAY "==============================================="
                "================================"
-               DISPLAY "                      CHECK-OUT COMPLETED SUC"
-               "CESSFULLY                       "
+               DISPLAY "                           CHECK-OUT COMPLETED "
+               "SUCCESSFULLY                       "
                DISPLAY "==============================================="
                "================================"
                RESET-COLOR
@@ -288,6 +281,9 @@
 
        *> Display check-in details
        DISPLAY-CHECKIN-DETAILS.
+           *> Get guest information first to display guest count
+           PERFORM GET-GUEST-INFORMATION
+
            *> Format check-in date and time
            MOVE ACTUAL-CHECKIN-DATE TO WS-TEMP-DATE
            STRING WS-TEMP-DATE(1:4) "-" WS-TEMP-DATE(5:2) "-"
@@ -311,9 +307,10 @@
            DISPLAY "  Booking ID:       " BOOKING-ID-IO
            DISPLAY "  Check-in:         " WS-FORMATTED-DATE " "
            WS-FORMATTED-TIME
+           DISPLAY "  Number of Guests: " WS-GUEST-COUNT
            DISPLAY "                                                   "
            DISPLAY "==================================================="
-           "============================".
+           "=============================".
 
        *> Get current date and time
        GET-CURRENT-DATETIME.
@@ -325,33 +322,50 @@
 
        *> Get guest and room information
        GET-GUEST-INFORMATION.
-           *> Get customer info from staylog
+           *> Initialize guest count
+           MOVE 0 TO WS-GUEST-COUNT
+
+           *> Get customer info from staylog - collect ALL guests
            OPEN INPUT STAYLOG-FILE
            MOVE 'N' TO WS-EOF
-           MOVE 'N' TO WS-FOUND
 
-           PERFORM UNTIL WS-EOF = 'Y' OR WS-FOUND = 'Y'
+           PERFORM UNTIL WS-EOF = 'Y'
                READ STAYLOG-FILE NEXT
                    AT END
                        MOVE 'Y' TO WS-EOF
                    NOT AT END
                        IF CHECKIN-ID-SL = CHECKIN-ID
-                           MOVE CUSTOMER-ID-SL TO CUSTOMER-ID
-                           OPEN INPUT CUSTOMER-FILE
-                           READ CUSTOMER-FILE KEY IS CUSTOMER-ID
-                           INVALID KEY
-                              MOVE "Unknown" TO WS-CUSTOMER-NAME
-                              MOVE "Unknown" TO WS-CUSTOMER-PHONE
-                           NOT INVALID KEY
-                              MOVE CUSTOMER-NAME TO WS-CUSTOMER-NAME
-                               MOVE CUSTOMER-PHONE TO WS-CUSTOMER-PHONE
-                           END-READ
-                           CLOSE CUSTOMER-FILE
-                           MOVE 'Y' TO WS-FOUND
+                           ADD 1 TO WS-GUEST-COUNT
+                           IF WS-GUEST-COUNT <= 5
+                               MOVE CUSTOMER-ID-SL TO CUSTOMER-ID
+                               OPEN INPUT CUSTOMER-FILE
+                               READ CUSTOMER-FILE KEY IS CUSTOMER-ID
+                               INVALID KEY
+                                  MOVE "Unknown" TO
+                                  WS-GUEST-NAME(WS-GUEST-COUNT)
+                                  MOVE "Unknown" TO
+                                  WS-GUEST-PHONE(WS-GUEST-COUNT)
+                               NOT INVALID KEY
+                                  MOVE CUSTOMER-NAME TO
+                                  WS-GUEST-NAME(WS-GUEST-COUNT)
+                                  MOVE CUSTOMER-PHONE TO
+                                  WS-GUEST-PHONE(WS-GUEST-COUNT)
+                               END-READ
+                               CLOSE CUSTOMER-FILE
+                           END-IF
                        END-IF
                END-READ
            END-PERFORM
            CLOSE STAYLOG-FILE
+
+           *> Set primary guest info (first guest for backward compatibility)
+           IF WS-GUEST-COUNT > 0
+               MOVE WS-GUEST-NAME(1) TO WS-CUSTOMER-NAME
+               MOVE WS-GUEST-PHONE(1) TO WS-CUSTOMER-PHONE
+           ELSE
+               MOVE "Unknown" TO WS-CUSTOMER-NAME
+               MOVE "Unknown" TO WS-CUSTOMER-PHONE
+           END-IF
 
            *> Get room info
            OPEN INPUT ROOMS-FILE
@@ -386,7 +400,7 @@
            DISPLAY CYAN-COLOR
            DISPLAY "==================================================="
            "============================"
-           DISPLAY "                        BILLING CALCULATION        "
+           DISPLAY "                           BILLING CALCULATION     "
            DISPLAY "==================================================="
            "============================"
            RESET-COLOR
@@ -449,45 +463,73 @@
 
            DISPLAY CLEAR-SCREEN
            DISPLAY YELLOW-COLOR
-           DISPLAY "==============================================="
-           "================================"
-           DISPLAY "                                   INVOICE     "
-           "                                 "
-           DISPLAY "==============================================="
-           "================================"
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                                   INVOICE         "
+           "                                "
+           DISPLAY "==================================================="
+           "============================"
            RESET-COLOR
-           DISPLAY "Invoice ID:     " INVOICE-ID
-           DISPLAY "Check-out Date: " WS-FORMATTED-DATE
-           DISPLAY "Check-out Time: " WS-FORMATTED-TIME
+           DISPLAY "                       Invoice ID:     " INVOICE-ID
+           DISPLAY "                       Check-out Date: "
+           WS-FORMATTED-DATE
+           DISPLAY "                       Check-out Time: "
+           WS-FORMATTED-TIME
            DISPLAY " "
-           DISPLAY CYAN-COLOR "Guest Information:" RESET-COLOR
-           DISPLAY "  Name:         " WS-CUSTOMER-NAME
-           DISPLAY "  Phone:        " WS-CUSTOMER-PHONE
+           DISPLAY CYAN-COLOR "                     Guest Information:"
+           RESET-COLOR
+
+           *> Display all guests
+           PERFORM VARYING WS-GUEST-COUNTER FROM 1 BY 1
+                   UNTIL WS-GUEST-COUNTER > WS-GUEST-COUNT
+               IF WS-GUEST-COUNTER = 1
+                   DISPLAY "                       Guest "
+                   WS-GUEST-COUNTER ":      "
+                   WS-GUEST-NAME(WS-GUEST-COUNTER)
+                   DISPLAY "                       Phone:        "
+                   WS-GUEST-PHONE(WS-GUEST-COUNTER)
+               ELSE
+                   DISPLAY "                       Guest "
+                   WS-GUEST-COUNTER ":      "
+                   WS-GUEST-NAME(WS-GUEST-COUNTER)
+                   DISPLAY "                       Phone:        "
+                   WS-GUEST-PHONE(WS-GUEST-COUNTER)
+               END-IF
+           END-PERFORM
+
            DISPLAY " "
-           DISPLAY CYAN-COLOR "Stay Information:" RESET-COLOR
-           DISPLAY "  Room:         " ROOM-ID-IO " (" 
+           DISPLAY CYAN-COLOR "                     Stay Information:"
+           RESET-COLOR
+           DISPLAY "                       Room:         " ROOM-ID-IO
+           " ("
            FUNCTION TRIM(WS-ROOM-TYPE) ")"
-           DISPLAY "  Check-in ID:  " CHECKIN-ID
-           DISPLAY "  Days Stayed:  " WS-STAY-DAYS
+           DISPLAY "                       Check-in ID:  " CHECKIN-ID
+           DISPLAY "                       Days Stayed:  " WS-STAY-DAYS
 
            MOVE WS-ROOM-PRICE TO WS-FORMATTED-PRICE
-           DISPLAY "  Room Rate:    " WS-FORMATTED-PRICE " per night"
+           DISPLAY "                       Room Rate:    "
+           WS-FORMATTED-PRICE " per night"
            DISPLAY " "
-           DISPLAY CYAN-COLOR "Charges:" RESET-COLOR
+           DISPLAY CYAN-COLOR "                     Charges:"
+           RESET-COLOR
 
            MOVE WS-ROOM-CHARGES TO WS-FORMATTED-TOTAL
-           DISPLAY "  Room Charges: " WS-FORMATTED-TOTAL
+           DISPLAY "                       Room Charges: "
+           WS-FORMATTED-TOTAL
            MOVE WS-SERVICE-CHARGES TO WS-FORMATTED-TOTAL
-           DISPLAY "  Service Fees: " WS-FORMATTED-TOTAL
+           DISPLAY "                       Service Fees: "
+           WS-FORMATTED-TOTAL
            MOVE WS-TAX-AMOUNT TO WS-FORMATTED-TOTAL
-           DISPLAY "  Tax (15%):    " WS-FORMATTED-TOTAL
-           DISPLAY "==============================================="
-           "================================"
+           DISPLAY "                       Tax (15%):    "
+           WS-FORMATTED-TOTAL
+           DISPLAY "==================================================="
+           "============================"
            MOVE WS-TOTAL-AMOUNT TO WS-FORMATTED-TOTAL
-           DISPLAY GREEN-COLOR "  TOTAL AMOUNT: " WS-FORMATTED-TOTAL
+           DISPLAY GREEN-COLOR "                     TOTAL AMOUNT: "
+           WS-FORMATTED-TOTAL
            RESET-COLOR
-           DISPLAY "==============================================="
-           "================================"
+           DISPLAY "==================================================="
+           "============================"
            DISPLAY " "
            DISPLAY "Press ENTER to continue..."
            ACCEPT WS-DUMMY-INPUT.

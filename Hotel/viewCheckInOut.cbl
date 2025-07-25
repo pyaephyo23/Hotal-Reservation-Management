@@ -40,7 +40,7 @@
 
        *> Display formatting
        01 WS-RECORD-COUNT             PIC 9(3) VALUE 0.
-       01 WS-DISPLAY-COUNT            PIC Z99.
+       01 WS-DISPLAY-COUNT            PIC ZZZ.
 
        *> Date/time formatting
        01 WS-TEMP-DATE.
@@ -70,29 +70,31 @@
            PERFORM UNTIL WS-EXIT-FLAG = 'Y'
                DISPLAY CLEAR-SCREEN
                DISPLAY BLUE-COLOR
-               DISPLAY "==============================================="
-               "===================================="
-               DISPLAY "                       CHECK-IN/OUT RECORD VI"
-               "EWER                          "
-               DISPLAY "==============================================="
-               "===================================="
-               RESET-COLOR
-               DISPLAY "                                               "
-               DISPLAY "                  1. View All Check-in/out Rec"
-               "ords                          "
-               DISPLAY "                  2. View Active Check-ins (No"
-               "t checked out)                "
-               DISPLAY "                  3. View Completed Check-ins "
-               "(Checked out)                 "
-               DISPLAY "                  4. Search by Check-in ID    "
-               "                              "
-               DISPLAY "                  5. Search by Room Number    "
-               "                              "
-               DISPLAY "                  9. Return to Main Menu      "
-               "                              "
-               DISPLAY "                                               "
-               DISPLAY "==============================================="
-               "===================================="
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                       CHECK-IN/OUT RECORD VIEWER"
+           " SYSTEM                      "
+           DISPLAY "==================================================="
+           "============================"
+           RESET-COLOR
+           DISPLAY "                                                   "
+           DISPLAY "                  1. View All Check-in/out Records"
+           "                          "
+           DISPLAY "                  2. View Active Check-ins (Not ch"
+           "ecked out)                "
+           DISPLAY "                  3. View Completed Check-ins (Che"
+           "cked out)                 "
+           DISPLAY "                  4. Search by Check-in ID        "
+           "                          "
+           DISPLAY "                  5. Search by Room Number        "
+           "                          "
+           DISPLAY "                                                   "
+           DISPLAY "==================================================="
+           "============================"
+           DISPLAY "                  9. Go Back to Main Menu       "
+           "                     "
+           DISPLAY "==================================================="
+           "============================"
                ACCEPT WS-CHOICE
 
                EVALUATE WS-CHOICE
@@ -359,7 +361,8 @@
            MOVE WS-RECORD-COUNT TO WS-DISPLAY-COUNT
            DISPLAY "==============================================="
            "===================================="
-           DISPLAY GREEN-COLOR "Total records found: " WS-DISPLAY-COUNT
+           DISPLAY GREEN-COLOR "Total records found: " 
+           WS-DISPLAY-COUNT
            RESET-COLOR
            DISPLAY "==============================================="
            "===================================="

@@ -44,12 +44,17 @@
            DISPLAY "                              6. View Hotel Rooms  "
            DISPLAY "                              7. View Customers    "
            DISPLAY "                              8. View Check-In/Out "
-           DISPLAY "                              9. Generate Daily Rep"
+           DISPLAY "                              9. View Stay Logs    "
+          DISPLAY "                              10. Generate Daily Rep"
            "ort                          "
-           DISPLAY "                              10. Generate Monthly "
+           DISPLAY "                              11. Generate Monthly "
            "Report                        "
+           DISPLAY " "
+           DISPLAY "==================================================="
+           "============================"
+
            DISPLAY "                              99. Exit             "
-           DISPLAY "                                                   "
+
            DISPLAY "==================================================="
            "============================"
            ACCEPT MENU-CHOICE
@@ -63,8 +68,9 @@
                WHEN 6 PERFORM VIEW-ROOMS
                WHEN 7 PERFORM VIEW-CUSTOMERS
                WHEN 8 PERFORM VIEW-CHECKINOUT
-               WHEN 9 PERFORM DAILY-REPORT
-               WHEN 10 PERFORM MONTHLY-REPORT
+               WHEN 9 PERFORM VIEW-STAYLOGS
+               WHEN 10 PERFORM DAILY-REPORT
+               WHEN 11 PERFORM MONTHLY-REPORT
                WHEN 99
                    DISPLAY CLEAR-SCREEN
                    DISPLAY GREEN-COLOR
@@ -83,7 +89,7 @@
                WHEN OTHER
                    DISPLAY " "
                    DISPLAY RED-COLOR "*** ERROR: Invalid selection. Ple"
-                   "ase choose a valid option (1-10, 99). ***"
+                   "ase choose a valid option (1-11, 99). ***"
                    RESET-COLOR
                    DISPLAY " "
                    DISPLAY "Press ENTER to continue..."
@@ -117,10 +123,13 @@
        VIEW-CHECKINOUT.
            CALL 'viewCheckInOut'.
                 cancel 'viewCheckInOut'.
+       VIEW-STAYLOGS.
+           CALL 'viewStaylogs'.
+                cancel 'viewStaylogs'.
        DAILY-REPORT.
-           CALL 'dailySummaryReport.'
-                cancel 'dailySummaryReport'.
+           CALL 'dailyReport'.
+                cancel 'dailyReport'.
        MONTHLY-REPORT.
-           CALL 'monthlySummaryReport'.
-                cancel 'monthlySummaryReport'.
+           CALL 'monthlyReport'.
+                cancel 'monthlyReport'.
        END PROGRAM Main.
