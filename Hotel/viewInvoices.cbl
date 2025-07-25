@@ -23,7 +23,7 @@
        01  MENU-CHOICE                PIC 9.
        01  WS-INVOICE-FILE-STATUS     PIC 99.
        01  WS-SEARCH-INVOICE          PIC 9(5).
-       01  WS-SEARCH-BOOKING          PIC 9(5).
+       01  WS-SEARCH-CHECKIN          PIC 9(5).
        01  WS-PRICE-DISPLAY           PIC $$,$$$,$$9.
        01  WS-FORMATTED-DATE          PIC X(10).
 
@@ -42,7 +42,7 @@
        01  WS-HEADER-1.
            05 FILLER               PIC X(7) VALUE 'INVOICE'.
            05 FILLER               PIC X(3) VALUE SPACES.
-           05 FILLER               PIC X(7) VALUE 'BOOKING'.
+           05 FILLER               PIC X(7) VALUE 'CHECKIN'.
            05 FILLER               PIC X(3) VALUE SPACES.
            05 FILLER               PIC X(10) VALUE 'CREATED '.
            05 FILLER               PIC X(3) VALUE SPACES.
@@ -72,7 +72,7 @@
        01  WS-DETAIL-LINE.
            05 WS-DL-INVOICE-ID     PIC Z(5)9.
            05 FILLER               PIC X(4) VALUE SPACES.
-           05 WS-DL-BOOKING-ID     PIC Z(5)9.
+           05 WS-DL-CHECKIN-ID     PIC Z(5)9.
            05 FILLER               PIC X(4) VALUE SPACES.
            05 WS-DL-CREATED-AT     PIC X(10).
            05 FILLER               PIC X(3) VALUE SPACES.
@@ -106,8 +106,8 @@
            "                        "
            DISPLAY "                        2. Search Invoice by Invoi"
            "ce ID                   "
-           DISPLAY "                        3. Search Invoice by Booki"
-           "ng ID                   "
+           DISPLAY "                        3. Search Invoice by Check"
+           "in ID                   "
            DISPLAY "                                                   "
            DISPLAY "==================================================="
            "============================"
@@ -119,7 +119,7 @@
            EVALUATE MENU-CHOICE
                WHEN 1 PERFORM ALL-INVOICES-DSP
                WHEN 2 PERFORM SEARCH-BY-INVOICE-ID
-               WHEN 3 PERFORM SEARCH-BY-BOOKING-ID
+               WHEN 3 PERFORM SEARCH-BY-CHECKIN-ID
                WHEN 9 GOBACK
                WHEN OTHER
                    DISPLAY " "
@@ -206,19 +206,19 @@
            END-IF
            PERFORM CLOSE-FILES.
 
-       SEARCH-BY-BOOKING-ID.
+       SEARCH-BY-CHECKIN-ID.
            DISPLAY CLEAR-SCREEN
            DISPLAY YELLOW-COLOR
            DISPLAY "==============================================="
            "================================"
-           DISPLAY "                       SEARCH BY BOOKING ID   "
+           DISPLAY "                       SEARCH BY CHECKIN ID   "
            "                               "
            DISPLAY "==============================================="
            "================================"
            RESET-COLOR
            DISPLAY " "
-           DISPLAY "Enter Booking ID: "
-           ACCEPT WS-SEARCH-BOOKING
+           DISPLAY "Enter Checkin ID: "
+           ACCEPT WS-SEARCH-CHECKIN
 
            MOVE 0 TO WS-INVOICE-COUNTER
            MOVE 'N' TO WS-EOF
@@ -226,8 +226,8 @@
            PERFORM OPEN-FILES
            IF WS-INVOICE-FILE-STATUS = '00'
                OR WS-INVOICE-FILE-STATUS = '97'
-               DISPLAY CYAN-COLOR "INVOICES FOR BOOKING ID: "
-               WS-SEARCH-BOOKING RESET-COLOR
+               DISPLAY CYAN-COLOR "INVOICES FOR CHECKIN ID: "
+               WS-SEARCH-CHECKIN RESET-COLOR
                PERFORM DISPLAY-HEADERS
               MOVE 0 TO INVOICE-ID
               *>START INVOICE-FILE KEY IS NOT LESS THAN INVOICE-ID
@@ -239,7 +239,7 @@
                END-READ
 
                PERFORM UNTIL WS-EOF = 'Y'
-                   IF BOOKING-ID-IV = WS-SEARCH-BOOKING
+                   IF CHECKIN-ID-IV = WS-SEARCH-CHECKIN
                        PERFORM DISPLAY-INVOICE-RECORD
                        ADD 1 TO WS-INVOICE-COUNTER
                    END-IF
@@ -250,8 +250,8 @@
 
                IF WS-INVOICE-COUNTER = 0
                    DISPLAY " "
-                   DISPLAY RED-COLOR "No record found for Booking ID "
-                   WS-SEARCH-BOOKING RESET-COLOR
+                   DISPLAY RED-COLOR "No record found for Checkin ID "
+                   WS-SEARCH-CHECKIN RESET-COLOR
                    DISPLAY " "
                    DISPLAY "Press ENTER to continue..."
                    ACCEPT WS-DUMMY-INPUT
@@ -302,7 +302,7 @@
 
        DISPLAY-INVOICE-RECORD.
            MOVE INVOICE-ID TO WS-DL-INVOICE-ID
-           MOVE BOOKING-ID-IV TO WS-DL-BOOKING-ID
+           MOVE CHECKIN-ID-IV TO WS-DL-CHECKIN-ID
            PERFORM FORMAT-DATE
            MOVE WS-FORMATTED-DATE TO WS-DL-CREATED-AT
            MOVE ROOM-CHARGE TO WS-DL-ROOM-CHARGE
