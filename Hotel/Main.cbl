@@ -1,4 +1,3 @@
-
        IDENTIFICATION DIVISION.
        PROGRAM-ID. Main.
        DATA DIVISION.
@@ -40,9 +39,10 @@
            DISPLAY "                              7. View Customers    "
            DISPLAY "                              8. View Check-In/Out "
            DISPLAY "                              9. View Stay Logs    "
-          DISPLAY "                              10. Generate Daily Rep"
+           DISPLAY "                              10. View Invoices   "
+          DISPLAY "                              11. Generate Daily Rep"
            "ort                          "
-           DISPLAY "                              11. Generate Monthly "
+           DISPLAY "                              12. Generate Monthly "
            "Report                        "
            DISPLAY " "
            DISPLAY "==================================================="
@@ -64,8 +64,9 @@
                WHEN 7 PERFORM VIEW-CUSTOMERS
                WHEN 8 PERFORM VIEW-CHECKINOUT
                WHEN 9 PERFORM VIEW-STAYLOGS
-               WHEN 10 PERFORM DAILY-REPORT
-               WHEN 11 PERFORM MONTHLY-REPORT
+               WHEN 10 PERFORM VIEW-INVOICES
+               WHEN 11 PERFORM DAILY-REPORT
+               WHEN 12 PERFORM MONTHLY-REPORT
                WHEN 99
                    DISPLAY CLEAR-SCREEN
                    DISPLAY GREEN-COLOR
@@ -84,7 +85,7 @@
                WHEN OTHER
                    DISPLAY " "
                    DISPLAY RED-COLOR "*** ERROR: Invalid selection. Ple"
-                   "ase choose a valid option (1-11, 99). ***"
+                   "ase choose a valid option (1-12, 99). ***"
                    RESET-COLOR
                    DISPLAY " "
                    DISPLAY "Press ENTER to continue..."
@@ -121,6 +122,9 @@
        VIEW-STAYLOGS.
            CALL 'viewStaylogs'.
                 cancel 'viewStaylogs'.
+       VIEW-INVOICES.
+           CALL 'viewInvoices'.
+                cancel 'viewInvoices'.
        DAILY-REPORT.
            CALL 'dailyReport'.
                 cancel 'dailyReport'.
