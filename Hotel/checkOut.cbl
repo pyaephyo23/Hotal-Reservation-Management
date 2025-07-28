@@ -147,7 +147,7 @@
                DISPLAY " "
                DISPLAY "==============================================="
                "================================"
-               DISPLAY "                              9. Return to Main"
+               DISPLAY "                              9. Back to Main "
                "Me"
                "nu                          "
 

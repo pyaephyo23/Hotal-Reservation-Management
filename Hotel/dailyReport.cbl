@@ -160,7 +160,7 @@
                    MOVE 'Y' TO WS-EOF
                NOT AT END
                    ADD 1 TO WS-TOTAL-ROOMS
-                   IF R-STATUS = "Occupied" OR R-STATUS = "Booked"
+                   IF R-STATUS = "Occupied"
                        ADD 1 TO WS-OCCUPIED-ROOMS
                    END-IF
                END-READ
@@ -238,7 +238,7 @@
                    AT END
                        MOVE 'Y' TO WS-EOF
                    NOT AT END
-                       IF BOOKING-ID-IV = WS-TARGET-BOOKING-ID
+                       IF CHECKIN-ID-IV = WS-TARGET-BOOKING-ID
                            MOVE 'Y' TO WS-INVOICE-FOUND
                        END-IF
                    END-READ
