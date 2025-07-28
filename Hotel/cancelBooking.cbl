@@ -274,7 +274,7 @@
                    RESET-COLOR
                    DISPLAY " "
                NOT INVALID KEY
-                   *> Set room status to Available when booking is cancelled
+               *> Set room status to Available when booking is cancelled
                    MOVE "Available" TO R-STATUS
 
                    REWRITE ROOMS-RECORD

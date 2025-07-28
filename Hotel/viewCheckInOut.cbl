@@ -151,6 +151,14 @@
            END-PERFORM
            CLOSE CHECKINOUT-FILE
 
+           IF WS-RECORD-COUNT = 0
+               DISPLAY " "
+               DISPLAY RED-COLOR
+               "*** No check-in/out records found in the system. ***"
+               RESET-COLOR
+               DISPLAY " "
+           END-IF
+
            PERFORM DISPLAY-SUMMARY.
 
        *> View only active check-ins (not checked out yet)
@@ -183,6 +191,14 @@
            END-PERFORM
            CLOSE CHECKINOUT-FILE
 
+           IF WS-RECORD-COUNT = 0
+               DISPLAY " "
+               DISPLAY RED-COLOR
+           "*** No active check-ins found"
+           " (all guests have checked out). ***" RESET-COLOR
+               DISPLAY " "
+           END-IF
+
            PERFORM DISPLAY-SUMMARY.
 
        *> View only completed check-ins (already checked out)
@@ -214,6 +230,14 @@
                END-READ
            END-PERFORM
            CLOSE CHECKINOUT-FILE
+
+           IF WS-RECORD-COUNT = 0
+               DISPLAY " "
+               DISPLAY RED-COLOR
+               "*** No completed check-ins found (no guests"
+               " have checked out yet). ***" RESET-COLOR
+               DISPLAY " "
+           END-IF
 
            PERFORM DISPLAY-SUMMARY.
 
@@ -298,6 +322,14 @@
            END-PERFORM
            CLOSE CHECKINOUT-FILE
 
+           IF WS-RECORD-COUNT = 0
+               DISPLAY " "
+               DISPLAY RED-COLOR
+               "*** No check-in records found for room "
+               WS-SEARCH-ROOM-ID ". ***" RESET-COLOR
+               DISPLAY " "
+           END-IF
+
            PERFORM DISPLAY-SUMMARY.
 
        *> Display table header
@@ -361,7 +393,7 @@
            MOVE WS-RECORD-COUNT TO WS-DISPLAY-COUNT
            DISPLAY "==============================================="
            "===================================="
-           DISPLAY GREEN-COLOR "Total records found: " 
+           DISPLAY GREEN-COLOR "Total records found: "
            WS-DISPLAY-COUNT
            RESET-COLOR
            DISPLAY "==============================================="
