@@ -5,11 +5,6 @@
        ENVIRONMENT DIVISION.
        INPUT-OUTPUT SECTION.
        FILE-CONTROL.
-           SELECT BOOKING-FILE ASSIGN TO '../DATA/BOOKINGS.DAT'
-               ORGANIZATION IS INDEXED
-               ACCESS MODE IS DYNAMIC
-               RECORD KEY IS BOOKING-ID.
-
            SELECT ROOMS-FILE ASSIGN TO '../DATA/ROOMS.DAT'
                ORGANIZATION IS INDEXED
                ACCESS MODE IS DYNAMIC
@@ -27,9 +22,6 @@
 
        DATA DIVISION.
        FILE SECTION.
-       FD  BOOKING-FILE.
-       COPY "./CopyBooks/BOOKINGS.cpy".
-
        FD  ROOMS-FILE.
        COPY "./CopyBooks/ROOMS.cpy".
 
@@ -40,7 +32,6 @@
        COPY "./CopyBooks/CHECKINOUT.cpy".
 
        WORKING-STORAGE SECTION.
-       01  WS-BOOKING-FILE-STATUS  PIC 99.
        01  WS-ROOMS-FILE-STATUS    PIC 99.
        01  WS-INVOICE-FILE-STATUS  PIC 99.
        01  WS-CHECKINOUT-FILE-STATUS PIC 99.
@@ -58,7 +49,7 @@
        01  WS-CHECKOUTS-TODAY      PIC 9(3) VALUE 0.
        01  WS-OCCUPIED-ROOMS       PIC 9(3) VALUE 0.
        01  WS-TOTAL-ROOMS          PIC 9(3) VALUE 0.
-       01  WS-DAILY-REVENUE        PIC 9(9)V99 VALUE 0.
+       01  WS-DAILY-REVENUE        PIC 9(9) VALUE 0.
 
        *> Calculations
        01  WS-OCCUPANCY-RATE       PIC 9(3)V99.
@@ -177,54 +168,50 @@
            END-IF.
 
        CALCULATE-DAILY-REVENUE.
-           OPEN INPUT BOOKING-FILE
-           IF WS-BOOKING-FILE-STATUS NOT = 00
-               DISPLAY "Error opening BOOKING file for revenue"
+           OPEN INPUT CHECKINOUT-FILE
+           IF WS-CHECKINOUT-FILE-STATUS NOT = 00
+               DISPLAY "Error opening CHECKINOUT file for revenue"
                GOBACK
            END-IF
 
            OPEN INPUT INVOICES-FILE
            IF WS-INVOICE-FILE-STATUS NOT = 00
                DISPLAY "Error opening INVOICES file"
-               CLOSE BOOKING-FILE
+               CLOSE CHECKINOUT-FILE
                GOBACK
            END-IF
 
            MOVE 'N' TO WS-EOF
-           MOVE 0 TO WS-DAILY-REVENUE
 
            PERFORM UNTIL WS-EOF = 'Y'
-               READ BOOKING-FILE NEXT RECORD
+               READ CHECKINOUT-FILE NEXT RECORD
                AT END
                    MOVE 'Y' TO WS-EOF
                NOT AT END
-                   PERFORM CHECK-DAILY-BOOKING-REVENUE
+                   PERFORM CHECK-DAILY-CHECKIN-REVENUE
                END-READ
            END-PERFORM
 
-           CLOSE BOOKING-FILE
+           CLOSE CHECKINOUT-FILE
            CLOSE INVOICES-FILE.
 
-       CHECK-DAILY-BOOKING-REVENUE.
-           *> Only process completed bookings
-           IF BOOKING-STATUS = "Completed"
-               MOVE CHECKIN-DATE TO WS-CHECKIN-DATE
+       CHECK-DAILY-CHECKIN-REVENUE.
+           *> Convert checkin date to numeric for comparison
+           MOVE ACTUAL-CHECKIN-DATE TO WS-CHECKIN-DATE
 
-               *> Include revenue for bookings that checked in on or before report date
-               IF WS-CHECKIN-DATE <= WS-REPORT-DATE
-                   PERFORM GET-INVOICE-REVENUE
-               END-IF
+           *> Include revenue for check-ins that occurred on report date
+           IF WS-CHECKIN-DATE = WS-REPORT-DATE
+               PERFORM GET-INVOICE-REVENUE
            END-IF.
 
        GET-INVOICE-REVENUE.
-           MOVE BOOKING-ID TO WS-TARGET-BOOKING-ID
-           PERFORM FIND-INVOICE-FOR-BOOKING
+           MOVE CHECKIN-ID TO WS-TARGET-BOOKING-ID
+           PERFORM FIND-INVOICE-FOR-CHECKIN
            IF WS-INVOICE-FOUND = 'Y'
-               COMPUTE WS-DAILY-REVENUE = WS-DAILY-REVENUE +
-               TOTAL-CHARGE
+               ADD TOTAL-CHARGE TO WS-DAILY-REVENUE
            END-IF.
 
-       FIND-INVOICE-FOR-BOOKING.
+       FIND-INVOICE-FOR-CHECKIN.
            MOVE 'N' TO WS-INVOICE-FOUND
 
            *> Close and reopen invoices file for fresh search
