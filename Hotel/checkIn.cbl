@@ -213,7 +213,7 @@
            *> Accept booker phone number
            DISPLAY "Enter Customer Phone Number: "
            ACCEPT WS-CUSTOMER-PHONE
-
+           DISPLAY ' '
            *> Accept room number
            DISPLAY "Enter Room Number: "
            ACCEPT WS-ROOM-NUMBER
@@ -1498,12 +1498,12 @@
        GET-VALID-PHONE.
            MOVE 'N' TO WS-VALIDATION-PASSED
            PERFORM UNTIL WS-VALIDATION-PASSED = 'Y'
-               DISPLAY "Guest Phone (10-15 digits): "
+               DISPLAY "Guest Phone (6-11 digits): "
                ACCEPT WS-TEMP-INPUT
 
                *> Check if input length is valid
-              IF FUNCTION LENGTH(FUNCTION TRIM(WS-TEMP-INPUT)) >= 10 AND
-                  FUNCTION LENGTH(FUNCTION TRIM(WS-TEMP-INPUT)) <= 15
+               IF FUNCTION LENGTH(FUNCTION TRIM(WS-TEMP-INPUT)) >= 6 AND
+                  FUNCTION LENGTH(FUNCTION TRIM(WS-TEMP-INPUT)) <= 11
                    *> Validate that phone contains only digits
                    PERFORM VALIDATE-PHONE-CHARACTERS
                    IF WS-INPUT-VALID = 'Y'
@@ -1520,7 +1520,7 @@
                ELSE
                    DISPLAY " "
                    DISPLAY RED-COLOR
-                   "Invalid length. Phone must be 10-15 digits."
+                   "Invalid length. Phone must be 6-11 digits."
                    RESET-COLOR
                    DISPLAY " "
                END-IF
