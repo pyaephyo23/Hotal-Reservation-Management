@@ -79,6 +79,7 @@
        01  WS-TOTAL-CHARGE-DEC     PIC 9(9)V99.
        01  WS-TARGET-BOOKING-ID    PIC 9(5).
        01  WS-INVOICE-FOUND        PIC X VALUE 'N'.
+       01  WS-INVOICE-EOF          PIC X VALUE 'N'.
 
        LINKAGE SECTION.
        01 LINK PIC 9.
@@ -219,11 +220,12 @@
            OPEN INPUT INVOICES-FILE
 
            IF WS-INVOICE-FILE-STATUS = 00
-               MOVE 'N' TO WS-EOF
-               PERFORM UNTIL WS-EOF = 'Y' OR WS-INVOICE-FOUND = 'Y'
+               MOVE 'N' TO WS-INVOICE-EOF
+               PERFORM UNTIL WS-INVOICE-EOF = 'Y' OR
+               WS-INVOICE-FOUND = 'Y'
                    READ INVOICES-FILE NEXT RECORD
                    AT END
-                       MOVE 'Y' TO WS-EOF
+                       MOVE 'Y' TO WS-INVOICE-EOF
                    NOT AT END
                        IF CHECKIN-ID-IV = WS-TARGET-BOOKING-ID
                            MOVE 'Y' TO WS-INVOICE-FOUND
