@@ -56,7 +56,7 @@
            05 WS-ROOM-LIST OCCURS 20 TIMES.
                10 WS-ROOM-ID   PIC X(5).
                10 WS-ROOM-TYPE PIC X(10).
-               10 WS-ROOM-PRICE PIC $(6).
+               10 WS-ROOM-PRICE PIC $(9).
 
        *> File status and flags
        01 WS-EOF               PIC X VALUE 'N'.
