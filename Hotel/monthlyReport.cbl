@@ -1,10 +1,4 @@
-******************************************************************
-      * Author: [Pyae Phyo kyaw]
-      * Date: 2025-07-18
-      * Purpose: Monthly Summary Report - Check-ins, Check-outs,
-      *          Occupancy Rate, and Revenue
-      * Tectonics: cobc
-      ******************************************************************
+
        IDENTIFICATION DIVISION.
        PROGRAM-ID. monthlyReport.
 

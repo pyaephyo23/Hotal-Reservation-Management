@@ -1,9 +1,4 @@
-      ******************************************************************
-      * Author: Kaung Myat Htun
-      * Date:
-      * Purpose: The Main program of Hotel Reservation Management System
-      * Tectonics: cobc
-      ******************************************************************
+
        IDENTIFICATION DIVISION.
        PROGRAM-ID. Main.
        DATA DIVISION.
