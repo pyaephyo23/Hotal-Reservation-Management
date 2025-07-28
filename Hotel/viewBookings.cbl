@@ -148,7 +148,24 @@
            ELSE
                PERFORM DISPLAY-HEADERS
                PERFORM READ-AND-DISPLAY-ALL UNTIL WS-EOF = 'Y'
-               PERFORM DISPLAY-SUMMARY
+               IF WS-BOOKING-COUNTER = 0
+                   DISPLAY " "
+                   DISPLAY RED-COLOR
+                   "   No bookings found in the system."
+                   RESET-COLOR
+                   DISPLAY " "
+                   DISPLAY " "
+               DISPLAY "==============================================="
+                   "================================"
+                   DISPLAY RED-COLOR "   No bookings found." RESET-COLOR
+               DISPLAY "==============================================="
+                   "================================"
+                   DISPLAY " "
+                   DISPLAY "Press ENTER to continue..."
+                   ACCEPT WS-DUMMY-INPUT
+               ELSE
+                   PERFORM DISPLAY-SUMMARY
+               END-IF
            END-IF
            CLOSE BOOKING-FILE.
 
@@ -177,7 +194,24 @@
            ELSE
                PERFORM DISPLAY-HEADERS
                PERFORM READ-AND-DISPLAY-ACTIVE UNTIL WS-EOF = 'Y'
-               PERFORM DISPLAY-SUMMARY
+               IF WS-BOOKING-COUNTER = 0
+                   DISPLAY " "
+                   DISPLAY RED-COLOR "   No active bookings found."
+                   RESET-COLOR
+                   DISPLAY " "
+                   DISPLAY " "
+               DISPLAY "==============================================="
+                   "================================"
+                   DISPLAY RED-COLOR
+                   "   No active bookings found." RESET-COLOR
+               DISPLAY "==============================================="
+                   "================================"
+                   DISPLAY " "
+                   DISPLAY "Press ENTER to continue..."
+                   ACCEPT WS-DUMMY-INPUT
+               ELSE
+                   PERFORM DISPLAY-SUMMARY
+               END-IF
            END-IF
            CLOSE BOOKING-FILE.
 
@@ -206,7 +240,24 @@
            ELSE
                PERFORM DISPLAY-HEADERS
                PERFORM READ-AND-DISPLAY-CANCELLED UNTIL WS-EOF = 'Y'
-               PERFORM DISPLAY-SUMMARY
+               IF WS-BOOKING-COUNTER = 0
+                   DISPLAY " "
+                   DISPLAY RED-COLOR "   No cancelled bookings found."
+                   RESET-COLOR
+                   DISPLAY " "
+                   DISPLAY " "
+               DISPLAY "==============================================="
+                   "================================"
+                   DISPLAY RED-COLOR
+                   "   No cancelled bookings found." RESET-COLOR
+               DISPLAY "==============================================="
+                   "================================"
+                   DISPLAY " "
+                   DISPLAY "Press ENTER to continue..."
+                   ACCEPT WS-DUMMY-INPUT
+               ELSE
+                   PERFORM DISPLAY-SUMMARY
+               END-IF
            END-IF
            CLOSE BOOKING-FILE.
 
@@ -235,7 +286,24 @@
            ELSE
                PERFORM DISPLAY-HEADERS
                PERFORM READ-AND-DISPLAY-COMPLETED UNTIL WS-EOF = 'Y'
-               PERFORM DISPLAY-SUMMARY
+               IF WS-BOOKING-COUNTER = 0
+                   DISPLAY " "
+                   DISPLAY RED-COLOR "   No completed bookings found."
+                   RESET-COLOR
+                   DISPLAY " "
+                   DISPLAY " "
+               DISPLAY "==============================================="
+                   "================================"
+                   DISPLAY RED-COLOR
+                   "   No completed bookings found." RESET-COLOR
+               DISPLAY "==============================================="
+                   "================================"
+                   DISPLAY " "
+                   DISPLAY "Press ENTER to continue..."
+                   ACCEPT WS-DUMMY-INPUT
+               ELSE
+                   PERFORM DISPLAY-SUMMARY
+               END-IF
            END-IF
            CLOSE BOOKING-FILE.
 
