@@ -186,8 +186,12 @@
                MOVE WS-SEARCH-INVOICE TO INVOICE-ID
                READ INVOICE-FILE KEY IS INVOICE-ID
                    INVALID KEY
+           DISPLAY "==============================================="
+           "================================"
                        DISPLAY RED-COLOR "Invoice ID "
                        WS-SEARCH-INVOICE " not found." RESET-COLOR
+           DISPLAY "==============================================="
+           "================================"
                        DISPLAY " "
                        DISPLAY "Press ENTER to continue..."
                        ACCEPT WS-DUMMY-INPUT
@@ -195,7 +199,7 @@
                        PERFORM DISPLAY-HEADERS
                        PERFORM DISPLAY-INVOICE-RECORD
                        ADD 1 TO WS-INVOICE-COUNTER
-                       PERFORM DISPLAY-SUMMARY
+                       PERFORM DISPLAY-SUMMARY-NO-AMOUNT
                END-READ
            ELSE
                DISPLAY RED-COLOR "Error opening invoice file."
@@ -256,7 +260,7 @@
                    DISPLAY "Press ENTER to continue..."
                    ACCEPT WS-DUMMY-INPUT
                ELSE
-                   PERFORM DISPLAY-SUMMARY
+                   PERFORM DISPLAY-SUMMARY-NO-AMOUNT
                END-IF
            ELSE
                DISPLAY RED-COLOR "Error opening invoice file."
@@ -328,6 +332,23 @@
                MOVE WS-TOTAL-AMOUNT TO WS-PRICE-DISPLAY
                DISPLAY GREEN-COLOR "Total Amount: " WS-PRICE-DISPLAY
                RESET-COLOR
+           END-IF
+           DISPLAY "==============================================="
+           "================================"
+           DISPLAY " "
+           DISPLAY "Press ENTER to continue..."
+           ACCEPT WS-DUMMY-INPUT.
+
+       DISPLAY-SUMMARY-NO-AMOUNT.
+           DISPLAY " "
+           DISPLAY "==============================================="
+           "================================"
+           IF WS-INVOICE-COUNTER = 0
+               DISPLAY RED-COLOR "No invoices found." RESET-COLOR
+           ELSE
+               MOVE WS-INVOICE-COUNTER TO WS-INVOICE-COUNT-DISPLAY
+               DISPLAY GREEN-COLOR "Total Invoices Found: "
+               WS-INVOICE-COUNT-DISPLAY RESET-COLOR
            END-IF
            DISPLAY "==============================================="
            "================================"

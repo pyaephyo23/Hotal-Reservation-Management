@@ -233,6 +233,13 @@
                            END-IF
                    END-READ
                END-PERFORM
+               IF WS-CUSTOMER-COUNTER = 0
+                   DISPLAY " "
+                   DISPLAY RED-COLOR "Customer name '" 
+                   FUNCTION TRIM(WS-SEARCH-NAME) "' not found." 
+                   RESET-COLOR
+                   DISPLAY " "
+               END-IF
                PERFORM DISPLAY-SUMMARY
            END-IF
            PERFORM CLOSE-FILES.
@@ -267,7 +274,7 @@
            "================================"
            "====================="
            IF WS-CUSTOMER-COUNTER = 0
-               DISPLAY RED-COLOR "No customers found." RESET-COLOR
+               DISPLAY RED-COLOR "   No customers found." RESET-COLOR
            ELSE
                MOVE WS-CUSTOMER-COUNTER TO WS-CUSTOMER-COUNT-DISPLAY
                DISPLAY GREEN-COLOR "Total Customers Found: "
