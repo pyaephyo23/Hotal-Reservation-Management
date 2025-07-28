@@ -1,9 +1,4 @@
-******************************************************************
-      * Author:
-      * Date:
-      * Purpose:
-      * Tectonics: cobc
-      ******************************************************************
+
        IDENTIFICATION DIVISION.
        PROGRAM-ID. cancelBooking.
        ENVIRONMENT DIVISION.

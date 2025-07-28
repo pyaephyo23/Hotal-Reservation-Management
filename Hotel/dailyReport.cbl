@@ -1,4 +1,4 @@
-******************************************************************
+
        IDENTIFICATION DIVISION.
        PROGRAM-ID. dailyReport.
 
