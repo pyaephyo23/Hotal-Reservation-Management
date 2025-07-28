@@ -217,9 +217,8 @@
            OPEN INPUT ROOMS-FILE
 
            IF WS-STAYLOG-FILE-STATUS NOT = 00
-               DISPLAY RED-COLOR "*** ERROR: Cannot open STAYLOG f"
-               "ile. Status: " WS-STAYLOG-FILE-STATUS " ***"
-               RESET-COLOR
+               DISPLAY RED-COLOR "*** ERROR: Cannot open STAYLOG file. "
+               "Status: " WS-STAYLOG-FILE-STATUS " ***" RESET-COLOR
                DISPLAY " "
                DISPLAY "Press ENTER to continue..."
                ACCEPT WS-DUMMY-INPUT
@@ -247,7 +246,7 @@
            DISPLAY " "
            DISPLAY "=================================================="
            "====================================="
-           DISPLAY GREEN-COLOR "Total Stay Logs: " 
+           DISPLAY GREEN-COLOR "Total Stay Logs: "
            WS-STAYLOG-COUNT-DISPLAY
            RESET-COLOR
            DISPLAY "=================================================="
@@ -302,18 +301,18 @@
 
            IF WS-FOUND = 'N'
                DISPLAY " "
-           DISPLAY "=================================================="
-           "====================================="
-               DISPLAY YELLOW-COLOR "No stay logs found for Customer"
-               " ID: " WS-SEARCH-CUSTOMER-ID RESET-COLOR
-           DISPLAY "=================================================="
-           "====================================="
+               DISPLAY "=============================================="
+               "========================================="
+               DISPLAY RED-COLOR "No stay logs found for Customer ID: "
+               WS-SEARCH-CUSTOMER-ID RESET-COLOR
+               DISPLAY "==============================================="
+               "========================================"
            ELSE
                DISPLAY " "
-           DISPLAY "=================================================="
-           "====================================="
+               DISPLAY "==============================================="
+               "========================================"
                MOVE WS-STAYLOG-COUNTER TO WS-STAYLOG-COUNT-DISPLAY
-               DISPLAY GREEN-COLOR "Found " 
+               DISPLAY GREEN-COLOR "Found "
                WS-STAYLOG-COUNT-DISPLAY
                " stay log(s) for Customer ID: "
                WS-SEARCH-CUSTOMER-ID RESET-COLOR
@@ -370,18 +369,18 @@
 
            IF WS-FOUND = 'N'
                DISPLAY " "
-           DISPLAY "=================================================="
-           "====================================="
-               DISPLAY YELLOW-COLOR "No stay logs found for Room ID:"
-               " " WS-SEARCH-ROOM-ID RESET-COLOR
-           DISPLAY "=================================================="
-           "====================================="
+            DISPLAY "=================================================="
+               "====================================="
+               DISPLAY RED-COLOR "No stay logs found for Room ID: "
+               WS-SEARCH-ROOM-ID RESET-COLOR
+            DISPLAY "=================================================="
+               "====================================="
            ELSE
                DISPLAY " "
-           DISPLAY "=================================================="
-           "====================================="
+            DISPLAY "=================================================="
+               "====================================="
                MOVE WS-STAYLOG-COUNTER TO WS-STAYLOG-COUNT-DISPLAY
-               DISPLAY GREEN-COLOR "Found " 
+               DISPLAY GREEN-COLOR "Found "
                WS-STAYLOG-COUNT-DISPLAY
                " stay log(s) for Room ID: "
                WS-SEARCH-ROOM-ID RESET-COLOR
@@ -438,18 +437,18 @@
 
            IF WS-FOUND = 'N'
                DISPLAY " "
+            DISPLAY "=================================================="
+               "================================================"
+               DISPLAY RED-COLOR "No stay logs found for Check-in ID: "
+               WS-SEARCH-CHECKIN-ID RESET-COLOR
            DISPLAY "=================================================="
-           "================================================"
-               DISPLAY YELLOW-COLOR "No stay logs found for Check-in"
-               " ID: " WS-SEARCH-CHECKIN-ID RESET-COLOR
-           DISPLAY "=================================================="
-           "================================================"
+           "=================================================="
            ELSE
                DISPLAY " "
-           DISPLAY "=================================================="
-           "================================================"
+            DISPLAY "=================================================="
+               "================================================"
                MOVE WS-STAYLOG-COUNTER TO WS-STAYLOG-COUNT-DISPLAY
-               DISPLAY GREEN-COLOR "Found " 
+               DISPLAY GREEN-COLOR "Found "
                WS-STAYLOG-COUNT-DISPLAY
                " stay log(s) for Check-in ID: "
                WS-SEARCH-CHECKIN-ID RESET-COLOR

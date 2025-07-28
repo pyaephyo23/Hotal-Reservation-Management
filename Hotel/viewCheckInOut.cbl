@@ -112,9 +112,8 @@
                        MOVE 'Y' TO WS-EXIT-FLAG
                    WHEN OTHER
                        DISPLAY " "
-                       DISPLAY RED-COLOR "*** ERROR: Invalid selection."
-                       "P"
-                       "lease choose 1-5 or 9. ***" RESET-COLOR
+                       DISPLAY RED-COLOR "Invalid selection. "
+                       "Please choose 1-5 or 9." RESET-COLOR
                        DISPLAY " "
                        DISPLAY "Press ENTER to continue..."
                        ACCEPT WS-DUMMY-INPUT
@@ -153,8 +152,7 @@
 
            IF WS-RECORD-COUNT = 0
                DISPLAY " "
-               DISPLAY RED-COLOR
-               "*** No check-in/out records found in the system. ***"
+               DISPLAY RED-COLOR "No check-in/out records found."
                RESET-COLOR
                DISPLAY " "
            END-IF
@@ -193,9 +191,8 @@
 
            IF WS-RECORD-COUNT = 0
                DISPLAY " "
-               DISPLAY RED-COLOR
-           "*** No active check-ins found"
-           " (all guests have checked out). ***" RESET-COLOR
+               DISPLAY RED-COLOR "No active check-ins found."
+               RESET-COLOR
                DISPLAY " "
            END-IF
 
@@ -233,9 +230,8 @@
 
            IF WS-RECORD-COUNT = 0
                DISPLAY " "
-               DISPLAY RED-COLOR
-               "*** No completed check-ins found (no guests"
-               " have checked out yet). ***" RESET-COLOR
+               DISPLAY RED-COLOR "No completed check-ins found."
+               RESET-COLOR
                DISPLAY " "
            END-IF
 
@@ -267,8 +263,8 @@
            READ CHECKINOUT-FILE KEY IS CHECKIN-ID
                INVALID KEY
                    DISPLAY " "
-                   DISPLAY RED-COLOR "No check-in record found with ID "
-                           WS-SEARCH-CHECKIN-ID RESET-COLOR
+                   DISPLAY RED-COLOR "Check-in ID "
+                   WS-SEARCH-CHECKIN-ID " not found." RESET-COLOR
                    DISPLAY " "
                NOT INVALID KEY
                    PERFORM DISPLAY-RECORD
@@ -276,12 +272,20 @@
            END-READ
            CLOSE CHECKINOUT-FILE
 
+           IF WS-FOUND = 'Y'
+           DISPLAY "==================================================="
+           "================================"
+               DISPLAY GREEN-COLOR "   Total records found:   1"
+               RESET-COLOR
+           END-IF
+           DISPLAY "=================================================="
+           "================================="
            IF WS-FOUND = 'N'
                DISPLAY RED-COLOR "Check-in record not found."
                RESET-COLOR
+           DISPLAY "=================================================="
+           "================================="
            END-IF
-           DISPLAY "==============================================="
-           "===================================="
            DISPLAY " "
            DISPLAY "Press ENTER to continue..."
            ACCEPT WS-DUMMY-INPUT.
@@ -308,6 +312,7 @@
            MOVE 0 TO WS-RECORD-COUNT
            MOVE 'N' TO WS-EOF
 
+           MOVE 'N' TO WS-FOUND
            OPEN INPUT CHECKINOUT-FILE
            PERFORM UNTIL WS-EOF = 'Y'
                READ CHECKINOUT-FILE NEXT
@@ -317,20 +322,27 @@
                        IF ROOM-ID-IO = WS-SEARCH-ROOM-ID
                            PERFORM DISPLAY-RECORD
                            ADD 1 TO WS-RECORD-COUNT
+                           MOVE 'Y' TO WS-FOUND
                        END-IF
                END-READ
            END-PERFORM
            CLOSE CHECKINOUT-FILE
 
-           IF WS-RECORD-COUNT = 0
-               DISPLAY " "
-               DISPLAY RED-COLOR
-               "*** No check-in records found for room "
-               WS-SEARCH-ROOM-ID ". ***" RESET-COLOR
-               DISPLAY " "
+           DISPLAY "==================================================="
+           "================================"
+           IF WS-FOUND = 'N'
+           DISPLAY RED-COLOR "   No check-in records found for room "
+           WS-SEARCH-ROOM-ID "." RESET-COLOR
            END-IF
-
-           PERFORM DISPLAY-SUMMARY.
+           IF WS-FOUND = 'Y'
+           DISPLAY GREEN-COLOR "      Total records found:  "
+           WS-RECORD-COUNT RESET-COLOR
+           END-IF
+           DISPLAY "==================================================="
+           "================================"
+           DISPLAY " "
+           DISPLAY "Press ENTER to continue..."
+           ACCEPT WS-DUMMY-INPUT.
 
        *> Display table header
        DISPLAY-HEADER.
@@ -391,13 +403,12 @@
        *> Display summary information
        DISPLAY-SUMMARY.
            MOVE WS-RECORD-COUNT TO WS-DISPLAY-COUNT
-           DISPLAY "==============================================="
-           "===================================="
-           DISPLAY GREEN-COLOR "Total records found: "
-           WS-DISPLAY-COUNT
-           RESET-COLOR
-           DISPLAY "==============================================="
-           "===================================="
+           DISPLAY "==================================================="
+           "================================"
+           DISPLAY GREEN-COLOR "   Total records found:  "
+           WS-DISPLAY-COUNT RESET-COLOR
+           DISPLAY "==================================================="
+           "================================"
            DISPLAY " "
            DISPLAY "Press ENTER to continue..."
            ACCEPT WS-DUMMY-INPUT.

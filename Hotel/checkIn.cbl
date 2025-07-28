@@ -1498,9 +1498,9 @@
        GET-VALID-PHONE.
            MOVE 'N' TO WS-VALIDATION-PASSED
            PERFORM UNTIL WS-VALIDATION-PASSED = 'Y'
-               DISPLAY "Guest Phone (6-11 digits): "
+               DISPLAY "Guest Phone Number (6-11 digits): "
                ACCEPT WS-TEMP-INPUT
-
+               DISPLAY " "
                *> Check if input length is valid
                IF FUNCTION LENGTH(FUNCTION TRIM(WS-TEMP-INPUT)) >= 6 AND
                   FUNCTION LENGTH(FUNCTION TRIM(WS-TEMP-INPUT)) <= 11
