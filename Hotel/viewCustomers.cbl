@@ -177,6 +177,7 @@
            DISPLAY "Enter Customer ID to search: "
            ACCEPT CUSTOMER-ID
            MOVE 'N' TO WS-EOF
+           MOVE 0 TO WS-CUSTOMER-COUNTER
            DISPLAY " "
            PERFORM OPEN-FILES
            IF WS-EOF = 'N'
