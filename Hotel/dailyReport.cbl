@@ -61,7 +61,7 @@
        01  WS-DISPLAY-OCCUPIED     PIC ZZ9.
        01  WS-DISPLAY-TOTAL        PIC ZZ9.
        01  WS-DISPLAY-OCCUPANCY    PIC ZZ9.99.
-       01  WS-DISPLAY-REVENUE      PIC $(9).
+       01  WS-DISPLAY-REVENUE      PIC ZZZ,ZZZ,ZZ9.
 
        *> Color codes for display - ANSI escape sequences
        01 RED-COLOR          PIC X(8) VALUE X"1B5B33316D".
@@ -77,9 +77,6 @@
 
        *> Temporary fields
        01  WS-TOTAL-CHARGE-DEC     PIC 9(9)V99.
-       01  WS-TARGET-BOOKING-ID    PIC 9(5).
-       01  WS-INVOICE-FOUND        PIC X VALUE 'N'.
-       01  WS-INVOICE-EOF          PIC X VALUE 'N'.
 
        LINKAGE SECTION.
        01 LINK PIC 9.
@@ -93,7 +90,8 @@
            GOBACK.
 
        GET-REPORT-DATE.
-           ACCEPT WS-REPORT-DATE FROM DATE YYYYMMDD.
+           ACCEPT WS-REPORT-DATE FROM DATE YYYYMMDD
+           DISPLAY "Report date set to: " WS-REPORT-DATE.
 
        COUNT-CHECKINS-CHECKOUTS.
            OPEN INPUT CHECKINOUT-FILE
@@ -169,69 +167,52 @@
            END-IF.
 
        CALCULATE-DAILY-REVENUE.
-           OPEN INPUT CHECKINOUT-FILE
-           IF WS-CHECKINOUT-FILE-STATUS NOT = 00
-               DISPLAY "Error opening CHECKINOUT file for revenue"
-               GOBACK
-           END-IF
+           DISPLAY "Starting daily revenue calculation..."
+           DISPLAY "Initial revenue: " WS-DAILY-REVENUE
 
            OPEN INPUT INVOICES-FILE
            IF WS-INVOICE-FILE-STATUS NOT = 00
-               DISPLAY "Error opening INVOICES file"
-               CLOSE CHECKINOUT-FILE
+               DISPLAY "Error opening INVOICES file for revenue"
                GOBACK
            END-IF
 
            MOVE 'N' TO WS-EOF
-
+           
+        *> Read all invoice records sequentially
+                   PERFORM UNTIL WS-EOF = 'Y'
+                       READ INVOICES-FILE NEXT RECORD
+                       AT END
+                           MOVE 'Y' TO WS-EOF
+                       NOT AT END
+                           PERFORM CHECK-DAILY-INVOICE-REVENUE
+                       END-READ
+                   END-PERFORM         *> Then read subsequent invoice records
            PERFORM UNTIL WS-EOF = 'Y'
-               READ CHECKINOUT-FILE NEXT RECORD
+               READ INVOICES-FILE NEXT RECORD
                AT END
                    MOVE 'Y' TO WS-EOF
                NOT AT END
-                   PERFORM CHECK-DAILY-CHECKIN-REVENUE
+                   PERFORM CHECK-DAILY-INVOICE-REVENUE
                END-READ
            END-PERFORM
 
-           CLOSE CHECKINOUT-FILE
-           CLOSE INVOICES-FILE.
-
-       CHECK-DAILY-CHECKIN-REVENUE.
-           *> Convert checkin date to numeric for comparison
-           MOVE ACTUAL-CHECKIN-DATE TO WS-CHECKIN-DATE
-
-           *> Include revenue for check-ins that occurred on report date
-           IF WS-CHECKIN-DATE = WS-REPORT-DATE
-               PERFORM GET-INVOICE-REVENUE
-           END-IF.
-
-       GET-INVOICE-REVENUE.
-           MOVE CHECKIN-ID TO WS-TARGET-BOOKING-ID
-           PERFORM FIND-INVOICE-FOR-CHECKIN
-           IF WS-INVOICE-FOUND = 'Y'
-               ADD TOTAL-CHARGE TO WS-DAILY-REVENUE
-           END-IF.
-
-       FIND-INVOICE-FOR-CHECKIN.
-           MOVE 'N' TO WS-INVOICE-FOUND
-
-           *> Close and reopen invoices file for fresh search
            CLOSE INVOICES-FILE
-           OPEN INPUT INVOICES-FILE
 
-           IF WS-INVOICE-FILE-STATUS = 00
-               MOVE 'N' TO WS-INVOICE-EOF
-               PERFORM UNTIL WS-INVOICE-EOF = 'Y' OR
-               WS-INVOICE-FOUND = 'Y'
-                   READ INVOICES-FILE NEXT RECORD
-                   AT END
-                       MOVE 'Y' TO WS-INVOICE-EOF
-                   NOT AT END
-                       IF CHECKIN-ID-IV = WS-TARGET-BOOKING-ID
-                           MOVE 'Y' TO WS-INVOICE-FOUND
-                       END-IF
-                   END-READ
-               END-PERFORM
+           DISPLAY "Final daily revenue: " WS-DAILY-REVENUE.
+
+       CHECK-DAILY-INVOICE-REVENUE.
+           DISPLAY "Processing Invoice ID: " INVOICE-ID
+           DISPLAY "Invoice creation date: " CREATED-AT-IV
+           DISPLAY "Report date: " WS-REPORT-DATE
+
+           *> Include revenue for invoices created on report date
+           IF CREATED-AT-IV = WS-REPORT-DATE
+               DISPLAY "Invoice matches report date - adding to revenue"
+               ADD TOTAL-CHARGE TO WS-DAILY-REVENUE
+               DISPLAY "Invoice amount: " TOTAL-CHARGE
+               DISPLAY "Running total: " WS-DAILY-REVENUE
+           ELSE
+               DISPLAY "Invoice date does not match report date"
            END-IF.
 
        DISPLAY-SUMMARY-REPORT.
@@ -274,7 +255,7 @@
            DISPLAY "                                                   "
            DISPLAY CYAN-COLOR "                     REVENUE:"
            RESET-COLOR
-           DISPLAY "                       Daily Revenue        : "
+           DISPLAY "                       Daily Revenue        : $"
            FUNCTION TRIM(WS-DISPLAY-REVENUE)
            DISPLAY "                                                   "
            DISPLAY "==================================================="
