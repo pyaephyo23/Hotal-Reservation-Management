@@ -135,6 +135,13 @@
            MOVE 0 TO WS-CHECKINS-MONTH
            MOVE 0 TO WS-CHECKOUTS-MONTH
 
+           *> Start by reading the first record
+           READ CHECKINOUT-FILE NEXT RECORD
+                   AT END
+                       MOVE 'Y' TO WS-EOF
+                   NOT AT END
+                       PERFORM CHECK-MONTHLY-CHECKINOUT-DATES
+                   END-READ         *> Then read subsequent records
            PERFORM UNTIL WS-EOF = 'Y'
                READ CHECKINOUT-FILE NEXT RECORD
                AT END
@@ -160,6 +167,13 @@
            MOVE 0 TO WS-COMPLETED-BOOKINGS
            MOVE 0 TO WS-ACTIVE-BOOKINGS
 
+           *> Start by reading the first record
+           READ BOOKING-FILE NEXT RECORD
+                   AT END
+                       MOVE 'Y' TO WS-EOF
+                   NOT AT END
+                       PERFORM CHECK-BOOKING-MONTH
+                   END-READ         *> Then read subsequent records
            PERFORM UNTIL WS-EOF = 'Y'
                READ BOOKING-FILE NEXT RECORD
                AT END
@@ -251,6 +265,16 @@
            MOVE 0 TO WS-OCCUPIED-ROOMS
            MOVE 0 TO WS-TOTAL-ROOMS
 
+           *> Start by reading the first record
+           READ ROOMS-FILE NEXT RECORD
+                   AT END
+                       MOVE 'Y' TO WS-EOF
+                   NOT AT END
+                       ADD 1 TO WS-TOTAL-ROOMS
+                       IF R-STATUS = "Occupied" OR R-STATUS = "Booked"
+                           ADD 1 TO WS-OCCUPIED-ROOMS
+                       END-IF
+                   END-READ         *> Then read subsequent records
            PERFORM UNTIL WS-EOF = 'Y'
                READ ROOMS-FILE NEXT RECORD
                AT END
@@ -283,6 +307,13 @@
            MOVE 'N' TO WS-EOF
            MOVE 0 TO WS-MONTHLY-REVENUE
 
+           *> Start by reading the first record
+           READ INVOICES-FILE NEXT RECORD
+                   AT END
+                       MOVE 'Y' TO WS-EOF
+                   NOT AT END
+                       PERFORM CHECK-INVOICE-MONTH
+                   END-READ         *> Then read subsequent records
            PERFORM UNTIL WS-EOF = 'Y'
                READ INVOICES-FILE NEXT RECORD
                AT END
